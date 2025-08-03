@@ -234,7 +234,7 @@ with tab2:
 
     # Use the 15 closest DART stations from your DataFrame
     for _, row in df_dart_closest.sort_values("distance_km").head(15).iterrows():
-        station = row["code"]
+        station = row["station"]
         url = f"https://www.ndbc.noaa.gov/station_page.php?station={station}&type=1"
 
         try:
