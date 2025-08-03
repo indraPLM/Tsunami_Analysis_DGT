@@ -160,6 +160,7 @@ with tab1:
     folium_static(m1)
     st.markdown("#### 📋 15 DART Buoys Closest to Earthquake")
     #st.dataframe(df_dart)
+    df_dart_closest.index = range(1, len(df_dart_closest)+1)
     st.dataframe(df_dart_closest)
     
     st.subheader("🌍 IOC Sea Level Monitoring Stations")
@@ -188,6 +189,7 @@ with tab1:
     folium_static(m2)
     st.markdown("#### 📋 15 IOC Station Closest to Earthquake")
     #st.dataframe(df_ioc)
+    df_ioc_closest.index = range(1, len(df_ioc_closest)+1)
     st.dataframe(df_ioc_closest)
 
 # ── Tab 2 ────────────────────────────────────────────
