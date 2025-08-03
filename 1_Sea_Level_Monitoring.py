@@ -243,18 +243,21 @@ with tab2:
 
 # ── Tab 3 ────────────────────────────────────────────
 with tab3:
-    st.header("📈 Tide Gauge Analysis (UTide Detiding)")
-    st.markdown("Select a station from Tab 1 data for UTide harmonic analysis.")
+    st.header("📈 Tide Gauge Analysis with Time Window Selection")
 
-    # --- Load tide station DataFrame from Tab 1 (assuming df_tide is globally available) ---
-    if "df_ioc" in globals():
-        tide_codes = df_ioc["code"].unique().tolist()
+    if "df_tide" in globals():
+        tide_codes = df_tide["Code"].unique().tolist()
         selected_code = st.selectbox("Select Tide Station Code", tide_codes, index=0)
+
+        # --- User-Controlled Time Window ---
+        duration_days = st.slider("Select Time Range (Days)", 1, 10, 3)
+        endtime = datetime.utcnow()
+        starttime = endtime - timedelta(days=duration_days)
+        st.write(f"Analyzing data from {starttime.strftime('%Y-%m-%d %H:%M')} to {endtime.strftime('%Y-%m-%d %H:%M')}")
 
         try:
             # --- Fetch Tide Data ---
-            endtime = datetime.utcnow().strftime("%Y-%m-%dT%H:%M")
-            data_url = f"https://www.ioc-sealevelmonitoring.org/bgraph.php?code={selected_code}&output=tab&period=0.5&endtime={endtime}"
+            data_url = f"https://www.ioc-sealevelmonitoring.org/bgraph.php?code={selected_code}&output=tab&period=0.5&endtime={endtime.strftime('%Y-%m-%dT%H:%M')}"
             soup_data = BeautifulSoup(requests.get(data_url).content, "html.parser")
             rows = soup_data.find_all("tr")
 
@@ -263,19 +266,21 @@ with tab3:
                 cols = row.find_all("td")
                 if len(cols) == 2:
                     try:
-                        timestamps.append(datetime.strptime(cols[0].text.strip(), "%Y-%m-%d %H:%M:%S"))
-                        levels.append(float(cols[1].text.strip()))
+                        t = datetime.strptime(cols[0].text.strip(), "%Y-%m-%d %H:%M:%S")
+                        if starttime <= t <= endtime:
+                            timestamps.append(t)
+                            levels.append(float(cols[1].text.strip()))
                     except:
                         continue
 
             if not timestamps:
-                st.warning(f"No tide data found for station `{selected_code}`.")
+                st.warning(f"No tide data found for `{selected_code}` in selected range.")
             else:
                 time_hours = np.array([(t - timestamps[0]).total_seconds() / 3600 for t in timestamps])
                 levels_array = np.array(levels)
 
-                # --- Fetch metadata ---
-                meta_url = f"https://www.ioc-sealevelmonitoring.org/station.php?code={selected_code}&period=0.5&endtime={endtime}"
+                # --- Metadata ---
+                meta_url = f"https://www.ioc-sealevelmonitoring.org/station.php?code={selected_code}&period=0.5&endtime={endtime.strftime('%Y-%m-%dT%H:%M')}"
                 soup_meta = BeautifulSoup(requests.get(meta_url).content, "html.parser")
 
                 def parse_coord(label):
@@ -286,23 +291,23 @@ with tab3:
                 latitude = parse_coord("Latitude")
                 longitude = parse_coord("Longitude")
 
-                st.success(f"📍 Station `{selected_code}` → Latitude: {latitude}, Longitude: {longitude}")
-                st.write(f"Records: {len(levels_array)} | Time Range: {timestamps[0]} → {timestamps[-1]}")
+                st.success(f"📍 `{selected_code}` → Latitude: {latitude}, Longitude: {longitude}")
+                st.write(f"Records: {len(levels_array)}")
 
-                # --- UTide Analysis ---
+                # --- UTide ---
                 coef = solve(time_hours, levels_array, lat=latitude, method='ols', constit='auto')
                 recon = reconstruct(time_hours, coef)
                 detided = levels_array - recon.h
 
-                # --- Plotting ---
+                # --- Plot ---
                 fig, axs = plt.subplots(2, 1, figsize=(12, 6), sharex=True)
-                axs[0].plot(timestamps, levels_array, color='royalblue')
-                axs[0].set_title("📊 Observed Tide Gauge Data")
+                axs[0].plot(timestamps, levels_array, color='cornflowerblue')
+                axs[0].set_title("Observed Tide Gauge Data")
                 axs[0].set_ylabel("PWL (m)")
                 axs[0].grid(True)
 
-                axs[1].plot(timestamps, detided, color='orange')
-                axs[1].set_title("📉 Detided Signal (UTide)")
+                axs[1].plot(timestamps, detided, color='orangered')
+                axs[1].set_title("Detided Signal (UTide)")
                 axs[1].set_xlabel("Time (UTC)")
                 axs[1].set_ylabel("Residual (m)")
                 axs[1].grid(True)
@@ -310,10 +315,11 @@ with tab3:
                 st.pyplot(fig)
 
         except Exception as e:
-            st.error(f"❌ Error loading or processing station `{selected_code}`: {e}")
+            st.error(f"❌ Error with station `{selected_code}`: {e}")
 
     else:
-        st.warning("Tide station DataFrame `df_tide` not found. Please check Tab 1 initialization.")
+        st.warning("Tide station DataFrame `df_tide` not found.")
+
 
 
 # ── Tab 4 ────────────────────────────────────────────
