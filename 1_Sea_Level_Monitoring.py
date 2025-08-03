@@ -114,10 +114,43 @@ with tab1:
     df_ioc = fetch_ioc_data()
     status_colors = {"online": "green", "offline": "red"}
 
+    import math
+
+    def haversine(lat1, lon1, lat2, lon2):
+        R = 6371.0  # Earth's radius in km
+        dlat = math.radians(lat2 - lat1)
+        dlon = math.radians(lon2 - lon1)
+        a = (math.sin(dlat/2)**2 +
+             math.cos(math.radians(lat1)) *
+             math.cos(math.radians(lat2)) *
+             math.sin(dlon/2)**2)
+        c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+        return R * c
+
+    # 🌋 Kamchatka Earthquake Epicenter
+    eq_lat = 52.44
+    eq_lon = 160.39
+
+    # ➡️ Find closest DART buoys
+    df_dart["distance_km"] = df_dart.apply(lambda row: haversine(eq_lat, eq_lon, row["lat"], row["lon"]), axis=1)
+    df_dart_closest = df_dart.nsmallest(15, "distance_km")
+
+    # ➡️ Find closest IOC stations
+    df_ioc["distance_km"] = df_ioc.apply(lambda row: haversine(eq_lat, eq_lon, row["lat"], row["lon"]), axis=1)
+    df_ioc_closest = df_ioc.nsmallest(15, "distance_km")
+
     st.subheader("🛰️ NDBC DART Tsunami Buoys (Live Coordinates)")
     tiles = "https://services.arcgisonline.com/arcgis/rest/services/Ocean/World_Ocean_Base/MapServer/tile/{z}/{y}/{x}"
     m1 = folium.Map(location=[0, 180], zoom_start=2, tiles=tiles, attr="ESRI")
     Fullscreen(position="topright").add_to(m1)
+
+    # 📍 Epicenter Marker
+    folium.Marker(
+        location=[eq_lat, eq_lon],
+        popup="📌 Kamchatka Earthquake Epicenter",
+        icon=folium.Icon(color="red", icon="glyphicon-screenshot")
+    ).add_to(m1)
+
     for _, buoy in df_dart.iterrows():
         folium.Marker(
             location=[buoy["lat"], buoy["lon"]],
@@ -130,6 +163,14 @@ with tab1:
     
     m2 = folium.Map(location=[0, 180], zoom_start=2, tiles=tiles, attr="ESRI")
     Fullscreen(position="topright").add_to(m2)
+
+    # 📍 Epicenter Marker
+    folium.Marker(
+        location=[eq_lat, eq_lon],
+        popup="📌 Kamchatka Earthquake Epicenter",
+        icon=folium.Icon(color="red", icon="glyphicon-screenshot")
+    ).add_to(m2)
+
     for _, station in df_ioc.iterrows():
         color = status_colors.get(station["status"], "gray")
         popup_text = f"{station['location']}, {station['country']}<br>Lat: {station['lat']}, Lon: {station['lon']}<br>Status: {station['status'].capitalize()}<br>Method: {station['method']}"
