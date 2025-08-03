@@ -155,8 +155,6 @@ with tab1:
     df_dart_closest["arrival_time"] = df_dart_closest["distance_km"].apply(estimate_arrival_time)
     df_ioc_closest["arrival_time"] = df_ioc_closest["distance_km"].apply(estimate_arrival_time)
 
-
-
     st.subheader("🛰️ NDBC DART Tsunami Buoys (Live Coordinates)")
     tiles = "https://services.arcgisonline.com/arcgis/rest/services/Ocean/World_Ocean_Base/MapServer/tile/{z}/{y}/{x}"
     m1 = folium.Map(location=[0, 180], zoom_start=2, tiles=tiles, attr="ESRI")
@@ -215,112 +213,93 @@ with tab1:
     st.dataframe(df_ioc_revised)
 
     
-
-# ── Tab 2 ────────────────────────────────────────────
+# ── Tab 2: Tsunami Analysis ─────────────────────────────
 import os
 import requests
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-from datetime import datetime
+from datetime import timedelta
 import re
 from bs4 import BeautifulSoup
 from utide import solve, reconstruct
-from matplotlib.backends.backend_pdf import PdfPages
 
 with tab2:
-    st.header("📊 Tsunami Analysis Using DART Buoy Data")
-    st.markdown("Select a DART station and view harmonic detiding results in real-time.")
+    st.header("🌊 DART Buoy Detiding Around Earthquake")
+    st.markdown("Displays detided data from the 15 closest DART stations surrounding epicenter.")
 
-    # Station selector
-    station_numbers = [
-        "21416", "21415", "21414", "21419", "21418", "21413", "21420",
-        "52402", "46413", "46408", "46402", "46403", "51425"
-    ]
-    selected_station = st.selectbox("📍 Choose DART Station", station_numbers)
-    start_date = st.date_input("Start Date", pd.to_datetime("2025-07-29"))
-    end_date = st.date_input("End Date", pd.to_datetime("2025-07-31"))
+    eq_time = datetime.strptime("2025-07-29 23:24:52", "%Y-%m-%d %H:%M:%S")  # UTC
+    zoom_start = eq_time - pd.Timedelta(hours=1)
+    zoom_end = eq_time + pd.Timedelta(hours=12)
 
-    if st.button("🔍 Analyze Station"):
-        # --- Scrape NOAA Station Page ---
-        url = f"https://www.ndbc.noaa.gov/station_page.php?station={selected_station}&type=1&startdate={start_date}&enddate={end_date}"
-        response = requests.get(url)
-        soup = BeautifulSoup(response.text, "html.parser")
+    # Use the 15 closest DART stations from your DataFrame
+    for _, row in df_dart_closest.sort_values("distance_km").head(15).iterrows():
+        station = row["code"]
+        url = f"https://www.ndbc.noaa.gov/station_page.php?station={station}&type=1"
 
-        # Metadata
-        h1_tag = soup.find("h1")
-        station_title = h1_tag.text.strip() if h1_tag else f"DART {selected_station}"
+        try:
+            response = requests.get(url)
+            soup = BeautifulSoup(response.text, "html.parser")
 
-        script_tag = soup.find("script", string=re.compile("currentstnid"))
-        script_text = script_tag.string if script_tag else ""
-        lat_match = re.search(r"currentstnlat\s*=\s*['\"](.*?)['\"]", script_text)
-        lng_match = re.search(r"currentstnlng\s*=\s*['\"](.*?)['\"]", script_text)
-        lat = float(lat_match.group(1)) if lat_match else 0.0
-        lng = float(lng_match.group(1)) if lng_match else 0.0
+            # Station title and location
+            h1_tag = soup.find("h1")
+            title = h1_tag.text.strip() if h1_tag else f"DART {station}"
+            script = soup.find("script", string=re.compile("currentstnid"))
+            script_text = script.string if script else ""
+            lat_match = re.search(r"currentstnlat\s*=\s*['\"](.*?)['\"]", script_text)
+            lng_match = re.search(r"currentstnlng\s*=\s*['\"](.*?)['\"]", script_text)
+            lat = float(lat_match.group(1)) if lat_match else 0.0
+            lon = float(lng_match.group(1)) if lng_match else 0.0
 
-        # Parse data
-        textarea = soup.find("textarea", attrs={"name": "data"})
-        if textarea:
+            # Parse buoy data
+            textarea = soup.find("textarea", attrs={"name": "data"})
+            if not textarea:
+                st.warning(f"⚠️ No data found for {station}")
+                continue
+
             lines = textarea.text.strip().splitlines()[2:]
             parsed = [line.split() for line in lines if len(line.split()) == 8]
             df = pd.DataFrame(parsed, columns=['year','month','day','hour','minute','second','T','HEIGHT'])
             df = df.astype({'year':int, 'month':int, 'day':int, 'hour':int, 'minute':int, 'second':int, 'T':int, 'HEIGHT':float})
             df['datetime'] = pd.to_datetime(df[['year','month','day','hour','minute','second']])
             df.sort_values('datetime', inplace=True)
-            df.reset_index(drop=True, inplace=True)
 
-            st.success(f"✅ Loaded {len(df)} observations from {station_title}")
-            st.dataframe(df)
+            # Filter data window
+            df_window = df[(df['datetime'] >= zoom_start) & (df['datetime'] <= zoom_end)].copy()
+            if df_window.empty:
+                st.info(f"ℹ️ No valid time range data at {station}")
+                continue
 
-            # Harmonic analysis
-            time_array = np.array(df['datetime'].to_list())
-            coef = solve(time_array, df['HEIGHT'].values, lat=lat, method='ols', conf_int='MC')
+            # Harmonic detiding
+            time_array = np.array(df_window['datetime'].to_list())
+            coef = solve(time_array, df_window['HEIGHT'].values, lat=lat, method='ols', conf_int='MC')
             recon = reconstruct(time_array, coef)
-            df['predicted_tide'] = recon.h
-            df['detrended'] = df['HEIGHT'] - df['predicted_tide']
+            df_window['predicted_tide'] = recon.h
+            df_window['detrended'] = df_window['HEIGHT'] - df_window['predicted_tide']
 
-            # Plot full series
-            st.markdown("### 📈 Full Time Series")
+            # Plot observed vs predicted tide and anomaly
+            st.markdown(f"### 🌐 Station: {station} ({title})")
             fig, axs = plt.subplots(2, 1, figsize=(10, 6), sharex=True)
-            axs[0].plot(df['datetime'], df['HEIGHT'], label='Observed HEIGHT', color='blue')
-            axs[0].plot(df['datetime'], df['predicted_tide'], label='Predicted Tide', color='green', linestyle='--')
+
+            axs[0].plot(df_window['datetime'], df_window['HEIGHT'], label='Observed', color='blue')
+            axs[0].plot(df_window['datetime'], df_window['predicted_tide'], label='Predicted Tide', color='green', linestyle='--')
             axs[0].set_ylabel("Height (m)")
             axs[0].legend()
             axs[0].grid(True)
 
-            axs[1].plot(df['datetime'], df['detrended'], label='Detided Signal', color='red')
+            axs[1].plot(df_window['datetime'], df_window['detrended'], label='Detided Signal', color='red')
             axs[1].axhline(0, color='black', linestyle='--')
-            axs[1].set_xlabel("DateTime")
-            axs[1].set_ylabel("Anomaly Height (m)")
+            axs[1].set_xlabel("Datetime")
+            axs[1].set_ylabel("Anomaly (m)")
             axs[1].legend()
             axs[1].grid(True)
 
             st.pyplot(fig)
 
-            # Zoomed window
-            st.markdown("### 🔍 Zoomed 12-Hour Signal")
-            zoom_start = pd.Timestamp("2025-07-29 23:00:00")
-            zoom_end = zoom_start + pd.Timedelta(hours=12)
-            df_zoom = df[(df['datetime'] >= zoom_start) & (df['datetime'] <= zoom_end)]
+        except Exception as e:
+            st.error(f"❌ Error processing station {station}: {e}")
 
-            fig, axs = plt.subplots(2, 1, figsize=(10, 6), sharex=True)
-            axs[0].plot(df_zoom['datetime'], df_zoom['HEIGHT'], label='Observed HEIGHT', color='blue')
-            axs[0].plot(df_zoom['datetime'], df_zoom['predicted_tide'], label='Predicted Tide', color='green', linestyle='--')
-            axs[0].set_ylabel("Height (m)")
-            axs[0].legend()
-            axs[0].grid(True)
 
-            axs[1].plot(df_zoom['datetime'], df_zoom['detrended'], label='Detided Signal', color='red', linestyle=':')
-            axs[1].axhline(0, color='black', linestyle='--')
-            axs[1].set_xlabel("DateTime")
-            axs[1].set_ylabel("Anomaly Height (m)")
-            axs[1].legend()
-            axs[1].grid(True)
-
-            st.pyplot(fig)
-
-        else:
-            st.error(f"⚠️ No data found for station {selected_station}")
 
 
 # ── Tab 3 ────────────────────────────────────────────
