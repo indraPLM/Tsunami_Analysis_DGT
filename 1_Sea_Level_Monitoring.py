@@ -16,34 +16,49 @@ station_ids = [
     "32D12", "32D13", "43412", "43413", "46401", "46402", "46403"
 ]  # Add more IDs as needed
 
-@st.cache_data(show_spinner="🔄 Fetching DART buoy coordinates...")
-def fetch_dart_metadata(station_ids):
-    base_url = "https://www.ndbc.noaa.gov/station_page.php?station="
+@st.cache_data(show_spinner="📡 Fetching DART Buoy Metadata...")
+def fetch_dart_metadata_v2(station_ids, startdate="2025-07-29", enddate="2025-07-31"):
+    base_url = "https://www.ndbc.noaa.gov/station_page.php"
     buoy_data = []
 
-    for stn in station_ids:
+    for station in station_ids:
         try:
-            url = base_url + stn
-            response = requests.get(url, timeout=10)
-            if response.status_code == 200:
-                script_text = re.findall(r"<script.*?>(.*?)</script>", response.text, re.DOTALL)
-                if script_text:
-                    js_vars = script_text[0]
-                    lat = re.search(r"currentstnlat\s*=\s*'([\d\.\-]+)'", js_vars)
-                    lon = re.search(r"currentstnlng\s*=\s*'([\d\.\-]+)'", js_vars)
-                    name = re.search(r"currentstnname\s*=\s*'(.+?)'", js_vars)
+            params = {
+                "station": station,
+                "type": "1",
+                "startdate": startdate,
+                "enddate": enddate
+            }
+            response = requests.get(base_url, params=params, timeout=10)
+            soup = BeautifulSoup(response.text, "html.parser")
 
-                    if lat and lon:
-                        buoy_data.append({
-                            "station": stn,
-                            "name": name.group(1) if name else f"Station {stn}",
-                            "lat": float(lat.group(1)),
-                            "lon": float(lon.group(1))
-                        })
+            # Extract <script> tag containing station metadata
+            script_tag = soup.find("script", string=re.compile("currentstnid"))
+            script_text = script_tag.string if script_tag else ""
+
+            metadata = {}
+            for key in ['currentstnid', 'currentstnlat', 'currentstnlng', 'currentstnname']:
+                match = re.search(f"{key}\\s*=\\s*['\"](.*?)['\"]", script_text)
+                if match:
+                    metadata[key] = match.group(1)
+
+            lat = float(metadata.get("currentstnlat", 0))
+            lng = float(metadata.get("currentstnlng", 0))
+            buoy_name = metadata.get("currentstnname", f"Buoy {station}")
+
+            if lat != 0 and lng != 0:
+                buoy_data.append({
+                    "station": station,
+                    "name": buoy_name,
+                    "lat": lat,
+                    "lon": lng
+                })
+
         except Exception:
             continue
 
     return pd.DataFrame(buoy_data)
+
 
 df_dart = fetch_dart_metadata(station_ids)
 
