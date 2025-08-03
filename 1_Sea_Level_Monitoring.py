@@ -127,9 +127,10 @@ with tab1:
         c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
         return R * c
 
-    # 🌋 Kamchatka Earthquake Epicenter
-    eq_lat = 52.44
-    eq_lon = 160.39
+    # 🌋 Kamchatka Earthquake Epicenter 52.512°N 160.324°E
+    eq_lat = 52.512
+    eq_lon = 160.324
+    signed = "📌 Kamchatka Earthquake Epicenter"
 
     # ➡️ Find closest DART buoys
     df_dart["distance_km"] = df_dart.apply(lambda row: haversine(eq_lat, eq_lon, row["lat"], row["lon"]), axis=1)
@@ -139,6 +140,22 @@ with tab1:
     df_ioc["distance_km"] = df_ioc.apply(lambda row: haversine(eq_lat, eq_lon, row["lat"], row["lon"]), axis=1)
     df_ioc_closest = df_ioc.nsmallest(15, "distance_km")
 
+    # 🌐 Tsunami wave speed in deep ocean (approximate)
+    tsunami_speed_mps = 195  # meters per second
+
+    # 🕒 Origin time of the Kamchatka earthquake (example)
+    from datetime import datetime, timedelta
+    eq_time = datetime.strptime("2025-07-29 23:24:52", "%Y-%m-%dT%H:%M:%S")  # UTC
+
+    def estimate_arrival_time(distance_km):
+        travel_time_sec = (distance_km * 1000) / tsunami_speed_mps
+        return eq_time + timedelta(seconds=travel_time_sec)
+
+    # ⏱️ Add arrival time to DART and IOC stations
+    df_dart_closest["arrival_time"] = df_dart_closest["distance_km"].apply(estimate_arrival_time)
+    df_ioc_closest["arrival_time"] = df_ioc_closest["distance_km"].apply(estimate_arrival_time)
+
+
     st.subheader("🛰️ NDBC DART Tsunami Buoys (Live Coordinates)")
     tiles = "https://services.arcgisonline.com/arcgis/rest/services/Ocean/World_Ocean_Base/MapServer/tile/{z}/{y}/{x}"
     m1 = folium.Map(location=[0, 180], zoom_start=2, tiles=tiles, attr="ESRI")
@@ -147,7 +164,7 @@ with tab1:
     # 📍 Epicenter Marker
     folium.Marker(
         location=[eq_lat, eq_lon],
-        popup="📌 Kamchatka Earthquake Epicenter",
+        popup=signed,
         icon=folium.Icon(color="red", icon="glyphicon-screenshot")
     ).add_to(m1)
 
@@ -171,7 +188,7 @@ with tab1:
     # 📍 Epicenter Marker
     folium.Marker(
         location=[eq_lat, eq_lon],
-        popup="📌 Kamchatka Earthquake Epicenter",
+        popup=signed,
         icon=folium.Icon(color="red", icon="glyphicon-screenshot")
     ).add_to(m2)
 
