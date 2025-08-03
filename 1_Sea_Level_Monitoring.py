@@ -128,7 +128,7 @@ with tab1:
 
     st.subheader("🌍 IOC Sea Level Monitoring Stations")
     
-    m2 = folium.Map(location=[0, 0], zoom_start=2, tiles=tiles, attr="ESRI")
+    m2 = folium.Map(location=[0, 180], zoom_start=2, tiles=tiles, attr="ESRI")
     Fullscreen(position="topright").add_to(m2)
     for _, station in df_ioc.iterrows():
         color = status_colors.get(station["status"], "gray")
