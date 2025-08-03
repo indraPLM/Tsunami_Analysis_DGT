@@ -145,7 +145,7 @@ with tab1:
 
     # 🕒 Origin time of the Kamchatka earthquake (example)
     from datetime import datetime, timedelta
-    eq_time = datetime.strptime("2025-07-29 23:24:52", "%Y-%m-%dT%H:%M:%S")  # UTC
+    eq_time = datetime.strptime("2025-07-29 23:24:52", "%Y-%m-%d %H:%M:%S")  # UTC
 
     def estimate_arrival_time(distance_km):
         travel_time_sec = (distance_km * 1000) / tsunami_speed_mps
