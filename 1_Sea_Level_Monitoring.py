@@ -26,12 +26,12 @@ with tab1:
     st.header("📍 Real-Time Tsunami Buoy & Sea Level Station Monitoring")
 
     def load_station_ids(filepath="dart_code.txt"):
-    try:
-        with open(filepath, "r") as f:
-            return [line.strip() for line in f if line.strip()]
-    except Exception as e:
-        st.error(f"Failed to load station IDs from {filepath}: {e}")
-        return []
+        try:
+            with open(filepath, "r") as f:
+                return [line.strip() for line in f if line.strip()]
+        except Exception as e:
+            st.error(f"Failed to load station IDs from {filepath}: {e}")
+            return []
 
     station_ids = load_station_ids()
 
