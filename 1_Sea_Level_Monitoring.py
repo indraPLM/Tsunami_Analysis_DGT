@@ -247,8 +247,8 @@ with tab3:
     st.markdown("Select a station from Tab 1 data for UTide harmonic analysis.")
 
     # --- Load tide station DataFrame from Tab 1 (assuming df_tide is globally available) ---
-    if "df_tide" in globals():
-        tide_codes = df_tide["Code"].unique().tolist()
+    if "df_ioc" in globals():
+        tide_codes = df_ioc["Code"].unique().tolist()
         selected_code = st.selectbox("Select Tide Station Code", tide_codes, index=0)
 
         try:
