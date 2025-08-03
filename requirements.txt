@@ -12,3 +12,11 @@ streamlit-folium==0.6.13
 cartopy
 streamlit_pdf_viewer
 utide
+geopy>=2.4.1
+shapely
+pyproj
+plotly
+tqdm
+joblib
+fpdf2
+PyMuPDF
