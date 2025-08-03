@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import folium
 from streamlit_folium import folium_static
+from folium.plugins import Fullscreen
 import requests
 from bs4 import BeautifulSoup
 import re
@@ -114,7 +115,9 @@ with tab1:
     status_colors = {"online": "green", "offline": "red"}
 
     st.subheader("🛰️ NDBC DART Tsunami Buoys (Live Coordinates)")
-    m1 = folium.Map(location=[0, 160], zoom_start=2, tiles="CartoDB positron")
+    tiles = "https://services.arcgisonline.com/arcgis/rest/services/Ocean/World_Ocean_Base/MapServer/tile/{z}/{y}/{x}"
+    m1 = folium.Map(location=[0, 180], zoom_start=2, tiles=tiles, attr="ESRI")
+    Fullscreen(position="topright").add_to(m1)
     for _, buoy in df_dart.iterrows():
         folium.Marker(
             location=[buoy["lat"], buoy["lon"]],
@@ -124,7 +127,9 @@ with tab1:
     folium_static(m1)
 
     st.subheader("🌍 IOC Sea Level Monitoring Stations")
-    m2 = folium.Map(location=[0, 0], zoom_start=2, tiles="CartoDB positron")
+    
+    m2 = folium.Map(location=[0, 0], zoom_start=2, tiles=tiles, attr="ESRI")
+    Fullscreen(position="topright").add_to(m2)
     for _, station in df_ioc.iterrows():
         color = status_colors.get(station["status"], "gray")
         popup_text = f"{station['location']}, {station['country']}<br>Lat: {station['lat']}, Lon: {station['lon']}<br>Status: {station['status'].capitalize()}<br>Method: {station['method']}"
