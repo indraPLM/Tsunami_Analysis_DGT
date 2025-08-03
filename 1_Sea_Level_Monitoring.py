@@ -230,7 +230,7 @@ with tab2:
 
     eq_time = datetime.strptime("2025-07-29 23:24:52", "%Y-%m-%d %H:%M:%S")  # UTC
     zoom_start = eq_time - pd.Timedelta(hours=4*24)
-    zoom_end = eq_time + pd.Timedelta(hours=2*24)
+    zoom_end = eq_time + pd.Timedelta(hours=1*24)
 
     # Use the 15 closest DART stations from your DataFrame
     for _, row in df_dart_closest.sort_values("distance_km").head(15).iterrows():
