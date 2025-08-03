@@ -188,4 +188,4 @@ with tab4:
 # ── Tab 5 ────────────────────────────────────────────
 with tab5:
     st.header("🔁 Tsunami Source Inversion")
-    uploaded_file = st.file_uploader("Upload Tide Gauge Observations (CSV)",
+    uploaded_file = st.file_uploader("Upload Tide Gauge Observations (CSV)", type=["csv"])
