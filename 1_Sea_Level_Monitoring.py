@@ -158,7 +158,10 @@ with tab1:
             icon=folium.Icon(color="orange", icon="info-sign")
         ).add_to(m1)
     folium_static(m1)
-
+    st.markdown("#### 📋 15 DART Buoys Closest to Earthquake")
+    #st.dataframe(df_dart)
+    st.dataframe(df_dart_closest)
+    
     st.subheader("🌍 IOC Sea Level Monitoring Stations")
     
     m2 = folium.Map(location=[0, 180], zoom_start=2, tiles=tiles, attr="ESRI")
@@ -183,12 +186,9 @@ with tab1:
             popup=folium.Popup(popup_text, max_width=300)
         ).add_to(m2)
     folium_static(m2)
-
-    st.markdown("#### 📋 DART Buoy Metadata")
-    st.dataframe(df_dart)
-
-    st.markdown("#### 📋 IOC Station Metadata")
-    st.dataframe(df_ioc)
+    st.markdown("#### 📋 15 IOC Station Closest to Earthquake")
+    #st.dataframe(df_ioc)
+    st.dataframe(df_ioc_closest)
 
 # ── Tab 2 ────────────────────────────────────────────
 import os
