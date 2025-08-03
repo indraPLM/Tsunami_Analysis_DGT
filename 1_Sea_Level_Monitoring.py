@@ -207,8 +207,12 @@ with tab1:
     folium_static(m2)
     st.markdown("#### 📋 15 IOC Station Closest to Earthquake")
     #st.dataframe(df_ioc)
-    df_ioc_closest.index = range(1, len(df_ioc_closest)+1)
-    st.dataframe(df_ioc_closest)
+    df_ioc_revised = df_ioc_closest.copy()
+    df_ioc_revised.rename(columns={"code": "station"}, inplace=True)
+    df_ioc_revised["location_country"] = df_ioc_revised["location"] + " - " + df_ioc_revised["country"]
+    df_ioc_revised = df_ioc_revised[["station", "lat", "lon", "location_country", "distance_km", "arrival_time"]]
+    df_ioc_revised.index = range(1, len(df_ioc_revised)+1)
+    st.dataframe(df_ioc_revised)
 
     
 
