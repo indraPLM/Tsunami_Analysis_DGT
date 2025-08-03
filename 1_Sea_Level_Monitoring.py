@@ -156,6 +156,76 @@ with tab1:
     df_ioc_closest["arrival_time"] = df_ioc_closest["distance_km"].apply(estimate_arrival_time)
 
 
+    import numpy as np
+    import pandas as pd
+
+    # 🌍 Earth's extent
+    lat_min, lat_max = -90, 90
+    lon_min, lon_max = -180, 180
+    spacing_deg = 5 / 60  # 5 arc minutes ≈ 0.083333°
+
+    # 🧵 Grid generation
+    lats = np.arange(lat_min, lat_max + spacing_deg, spacing_deg)
+    lons = np.arange(lon_min, lon_max + spacing_deg, spacing_deg)
+    grid = [(lat, lon) for lat in lats for lon in lons]
+    df_grid = pd.DataFrame(grid, columns=["lat", "lon"])
+
+    from geopy.distance import geodesic
+    from datetime import datetime, timedelta
+
+    epicenter = (eq_lat, eq_lon)  # 🧠 Example: Kamchatka coordinates
+    tsunami_speed_mps = 195
+    eq_time = datetime.strptime("2025-07-29 23:24:52", "%Y-%m-%d %H:%M:%S")
+
+    def estimate_arrival(lat, lon):
+        distance_km = geodesic((lat, lon), epicenter).km
+        travel_sec = (distance_km * 1000) / tsunami_speed_mps
+        return eq_time + timedelta(seconds=travel_sec)
+
+    df_grid["arrival_time"] = df_grid.apply(lambda row: estimate_arrival(row["lat"], row["lon"]), axis=1)
+    df_grid["arrival_hours"] = (df_grid["arrival_time"] - eq_time).dt.total_seconds() / 3600
+
+    import matplotlib.pyplot as plt
+    import numpy as np
+    from shapely.geometry import Polygon, mapping
+    import geopandas as gpd
+    from matplotlib import _contour
+
+    # Prepare grid
+    lat_vals = sorted(df_grid["lat"].unique())
+    lon_vals = sorted(df_grid["lon"].unique())
+    Z = df_grid.pivot(index="lat", columns="lon", values="arrival_hours").values
+
+    # Generate contours
+    lon_grid, lat_grid = np.meshgrid(lon_vals, lat_vals)
+    contour_levels = np.arange(0, Z.max(), 1)  # every hour
+    cs = plt.contour(lon_grid, lat_grid, Z, levels=contour_levels)
+
+    features = []
+    for i, collection in enumerate(cs.collections):
+        level = cs.levels[i]
+        for path in collection.get_paths():
+            coords = path.vertices
+            if len(coords) < 3:
+                continue
+            poly = Polygon(coords)
+            features.append({
+                "type": "Feature",
+                "properties": {"arrival_hour": float(level)},
+                "geometry": mapping(poly)
+            })
+
+    geojson_data = {
+        "type": "FeatureCollection",
+        "features": features
+    }
+
+    # Save to file
+    import json
+    with open("arrival_contours.geojson", "w") as f:
+        json.dump(geojson_data, f)
+    
+
     st.subheader("🛰️ NDBC DART Tsunami Buoys (Live Coordinates)")
     tiles = "https://services.arcgisonline.com/arcgis/rest/services/Ocean/World_Ocean_Base/MapServer/tile/{z}/{y}/{x}"
     m1 = folium.Map(location=[0, 180], zoom_start=2, tiles=tiles, attr="ESRI")
@@ -208,6 +278,8 @@ with tab1:
     #st.dataframe(df_ioc)
     df_ioc_closest.index = range(1, len(df_ioc_closest)+1)
     st.dataframe(df_ioc_closest)
+
+    
 
 # ── Tab 2 ────────────────────────────────────────────
 import os
