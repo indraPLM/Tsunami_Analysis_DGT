@@ -146,32 +146,28 @@ from bs4 import BeautifulSoup
 from utide import solve, reconstruct
 from matplotlib.backends.backend_pdf import PdfPages
 
-# 📡 DART station list
-station_numbers = [
-    "21416", "21415", "21414", "21419", "21418", "21413", "21420",
-    "52402", "46413", "46408", "46402", "46403", "51425"
-]
+with tab2:
+    st.header("📊 Tsunami Analysis Using DART Buoy Data")
+    st.markdown("Select a DART station and view harmonic detiding results in real-time.")
 
-# 📅 Date range
-start_date = "2025-07-29"
-end_date = "2025-07-31"
+    # Station selector
+    station_numbers = [
+        "21416", "21415", "21414", "21419", "21418", "21413", "21420",
+        "52402", "46413", "46408", "46402", "46403", "51425"
+    ]
+    selected_station = st.selectbox("📍 Choose DART Station", station_numbers)
+    start_date = st.date_input("Start Date", pd.to_datetime("2025-07-29"))
+    end_date = st.date_input("End Date", pd.to_datetime("2025-07-31"))
 
-# 📄 Output PDF path
-output_pdf_path = "dart_station_graphs_compiled.pdf"
-
-# 🖼️ PDF compilation
-with PdfPages(output_pdf_path) as pdf:
-    for station_id in station_numbers:
-        print(f"🔄 Processing station {station_id}...")
-
-        # --- Step 1: Fetch NOAA Buoy Page ---
-        url = f"https://www.ndbc.noaa.gov/station_page.php?station={station_id}&type=1&startdate={start_date}&enddate={end_date}"
+    if st.button("🔍 Analyze Station"):
+        # --- Scrape NOAA Station Page ---
+        url = f"https://www.ndbc.noaa.gov/station_page.php?station={selected_station}&type=1&startdate={start_date}&enddate={end_date}"
         response = requests.get(url)
         soup = BeautifulSoup(response.text, "html.parser")
 
-        # --- Step 2: Extract Metadata ---
+        # Metadata
         h1_tag = soup.find("h1")
-        station_title = h1_tag.text.strip() if h1_tag else f"DART {station_id}"
+        station_title = h1_tag.text.strip() if h1_tag else f"DART {selected_station}"
 
         script_tag = soup.find("script", string=re.compile("currentstnid"))
         script_text = script_tag.string if script_tag else ""
@@ -180,77 +176,70 @@ with PdfPages(output_pdf_path) as pdf:
         lat = float(lat_match.group(1)) if lat_match else 0.0
         lng = float(lng_match.group(1)) if lng_match else 0.0
 
-        # --- Step 3: Extract Observational Data ---
+        # Parse data
         textarea = soup.find("textarea", attrs={"name": "data"})
-        if not textarea:
-            print(f"⚠️ No data found for station {station_id}")
-            continue
+        if textarea:
+            lines = textarea.text.strip().splitlines()[2:]
+            parsed = [line.split() for line in lines if len(line.split()) == 8]
+            df = pd.DataFrame(parsed, columns=['year','month','day','hour','minute','second','T','HEIGHT'])
+            df = df.astype({'year':int, 'month':int, 'day':int, 'hour':int, 'minute':int, 'second':int, 'T':int, 'HEIGHT':float})
+            df['datetime'] = pd.to_datetime(df[['year','month','day','hour','minute','second']])
+            df.sort_values('datetime', inplace=True)
+            df.reset_index(drop=True, inplace=True)
 
-        lines = textarea.text.strip().splitlines()[2:]
-        parsed = [line.split() for line in lines if len(line.split()) == 8]
-        df = pd.DataFrame(parsed, columns=['year','month','day','hour','minute','second','T','HEIGHT'])
-        df = df.astype({'year':int, 'month':int, 'day':int, 'hour':int,
-                        'minute':int, 'second':int, 'T':int, 'HEIGHT':float})
-        df['datetime'] = pd.to_datetime(df[['year','month','day','hour','minute','second']])
-        df.sort_values('datetime', inplace=True)
-        df.reset_index(drop=True, inplace=True)
+            st.success(f"✅ Loaded {len(df)} observations from {station_title}")
+            st.dataframe(df)
 
-        # --- Step 4: Tidal Prediction & Detiding ---
-        time_array = np.array(df['datetime'].to_list())
-        coef = solve(time_array, df['HEIGHT'].values, lat=lat, method='ols', conf_int='MC')
-        recon = reconstruct(time_array, coef)
-        df['predicted_tide'] = recon.h
-        df['detrended'] = df['HEIGHT'] - df['predicted_tide']
+            # Harmonic analysis
+            time_array = np.array(df['datetime'].to_list())
+            coef = solve(time_array, df['HEIGHT'].values, lat=lat, method='ols', conf_int='MC')
+            recon = reconstruct(time_array, coef)
+            df['predicted_tide'] = recon.h
+            df['detrended'] = df['HEIGHT'] - df['predicted_tide']
 
-        # --- Step 5: Plot Full Time Series ---
-        fig, axs = plt.subplots(2, 1, figsize=(12, 10), sharex=True)
-        axs[0].plot(df['datetime'], df['HEIGHT'], label='Observed HEIGHT', color='blue')
-        axs[0].plot(df['datetime'], df['predicted_tide'], label='Predicted Tide', color='green', linestyle='--')
-        axs[0].set_title(f"{station_title}\nObserved vs. Predicted Tidal Height (Lat: {lat}, Lon: {lng})")
-        axs[0].set_ylabel("Height (m)")
-        axs[0].legend()
-        axs[0].grid(True)
+            # Plot full series
+            st.markdown("### 📈 Full Time Series")
+            fig, axs = plt.subplots(2, 1, figsize=(10, 6), sharex=True)
+            axs[0].plot(df['datetime'], df['HEIGHT'], label='Observed HEIGHT', color='blue')
+            axs[0].plot(df['datetime'], df['predicted_tide'], label='Predicted Tide', color='green', linestyle='--')
+            axs[0].set_ylabel("Height (m)")
+            axs[0].legend()
+            axs[0].grid(True)
 
-        axs[1].plot(df['datetime'], df['detrended'], label='Detided Signal', color='red')
-        axs[1].axhline(0, color='black', linestyle='--')
-        axs[1].set_title(f"{station_title}\nDetided Anomaly Signal")
-        axs[1].set_xlabel("DateTime")
-        axs[1].set_ylabel("Anomaly Height (m)")
-        axs[1].legend()
-        axs[1].grid(True)
+            axs[1].plot(df['datetime'], df['detrended'], label='Detided Signal', color='red')
+            axs[1].axhline(0, color='black', linestyle='--')
+            axs[1].set_xlabel("DateTime")
+            axs[1].set_ylabel("Anomaly Height (m)")
+            axs[1].legend()
+            axs[1].grid(True)
 
-        plt.xticks(rotation=45)
-        plt.tight_layout()
-        pdf.savefig(fig)
-        plt.close(fig)
+            st.pyplot(fig)
 
-        # --- Step 6: Plot 12-Hour Isolated Window ---
-        start_time = pd.Timestamp("2025-07-29 23:00:00")
-        end_time = start_time + pd.Timedelta(hours=12)
-        df_window = df[(df['datetime'] >= start_time) & (df['datetime'] <= end_time)]
+            # Zoomed window
+            st.markdown("### 🔍 Zoomed 12-Hour Signal")
+            zoom_start = pd.Timestamp("2025-07-29 23:00:00")
+            zoom_end = zoom_start + pd.Timedelta(hours=12)
+            df_zoom = df[(df['datetime'] >= zoom_start) & (df['datetime'] <= zoom_end)]
 
-        fig, axs = plt.subplots(2, 1, figsize=(12, 10), sharex=True)
-        axs[0].plot(df_window['datetime'], df_window['HEIGHT'], label='Observed HEIGHT', color='blue')
-        axs[0].plot(df_window['datetime'], df_window['predicted_tide'], label='Predicted Tide', color='green', linestyle='--')
-        axs[0].set_title(f"{station_title}\nObserved vs. Predicted Tidal Height\n{start_time} to {end_time}")
-        axs[0].set_ylabel("Height (m)")
-        axs[0].legend()
-        axs[0].grid(True)
+            fig, axs = plt.subplots(2, 1, figsize=(10, 6), sharex=True)
+            axs[0].plot(df_zoom['datetime'], df_zoom['HEIGHT'], label='Observed HEIGHT', color='blue')
+            axs[0].plot(df_zoom['datetime'], df_zoom['predicted_tide'], label='Predicted Tide', color='green', linestyle='--')
+            axs[0].set_ylabel("Height (m)")
+            axs[0].legend()
+            axs[0].grid(True)
 
-        axs[1].plot(df_window['datetime'], df_window['detrended'], label='Detided Signal', color='red', linestyle=':')
-        axs[1].axhline(0, color='black', linestyle='--', linewidth=0.8)
-        axs[1].set_title("Detided Anomaly Signal")
-        axs[1].set_xlabel("DateTime")
-        axs[1].set_ylabel("Anomaly Height (m)")
-        axs[1].legend()
-        axs[1].grid(True)
+            axs[1].plot(df_zoom['datetime'], df_zoom['detrended'], label='Detided Signal', color='red', linestyle=':')
+            axs[1].axhline(0, color='black', linestyle='--')
+            axs[1].set_xlabel("DateTime")
+            axs[1].set_ylabel("Anomaly Height (m)")
+            axs[1].legend()
+            axs[1].grid(True)
 
-        plt.xticks(rotation=45)
-        plt.tight_layout()
-        pdf.savefig(fig)
-        plt.close(fig)
+            st.pyplot(fig)
 
-print(f"✅ All station plots compiled into: {output_pdf_path}")
+        else:
+            st.error(f"⚠️ No data found for station {selected_station}")
+
 
 # ── Tab 3 ────────────────────────────────────────────
 with tab3:
