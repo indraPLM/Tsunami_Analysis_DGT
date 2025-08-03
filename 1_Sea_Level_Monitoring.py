@@ -248,7 +248,7 @@ with tab3:
 
     # --- Load tide station DataFrame from Tab 1 (assuming df_tide is globally available) ---
     if "df_ioc" in globals():
-        tide_codes = df_ioc["Code"].unique().tolist()
+        tide_codes = df_ioc["code"].unique().tolist()
         selected_code = st.selectbox("Select Tide Station Code", tide_codes, index=0)
 
         try:
