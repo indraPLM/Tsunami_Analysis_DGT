@@ -245,8 +245,8 @@ with tab2:
 with tab3:
     st.header("📈 Tide Gauge Analysis with Time Window Selection")
 
-    if "df_tide" in globals():
-        tide_codes = df_tide["Code"].unique().tolist()
+    if "df_ioc" in globals():
+        tide_codes = df_ioc["code"].unique().tolist()
         selected_code = st.selectbox("Select Tide Station Code", tide_codes, index=0)
 
         # --- User-Controlled Time Window ---
