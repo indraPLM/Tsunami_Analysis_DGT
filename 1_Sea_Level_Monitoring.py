@@ -25,10 +25,20 @@ tab1, tab2, tab3, tab4, tab5 = st.tabs([
 with tab1:
     st.header("📍 Real-Time Tsunami Buoy & Sea Level Station Monitoring")
 
-    station_ids = [
-        "21413", "21414", "21415", "21416", "21417", "21418", "21419", "21420", 
-        "32D12", "32D13", "43412", "43413", "46401", "46402", "46403"
-    ]
+    def load_station_ids(filepath="dart_code.txt"):
+    try:
+        with open(filepath, "r") as f:
+            return [line.strip() for line in f if line.strip()]
+    except Exception as e:
+        st.error(f"Failed to load station IDs from {filepath}: {e}")
+        return []
+
+    station_ids = load_station_ids()
+
+    #station_ids = [
+    #    "21413", "21414", "21415", "21416", "21417", "21418", "21419", "21420", 
+    #    "32D12", "32D13", "43412", "43413", "46401", "46402", "46403"
+    #]
 
     @st.cache_data(show_spinner="📡 Fetching DART Buoy Metadata...")
     def fetch_dart_metadata_v2(station_ids, startdate="2025-07-29", enddate="2025-07-31"):
