@@ -19,4 +19,3 @@ plotly
 tqdm
 joblib
 fpdf2
-PyMuPDF
