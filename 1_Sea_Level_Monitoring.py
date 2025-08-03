@@ -102,37 +102,32 @@ df_ioc = fetch_ioc_data()
 # ── Map Colors ──────────────────────────────────────
 status_colors = {"online": "green", "offline": "red"}
 
-# ── Layout: Two Columns ─────────────────────────────
-col1, col2 = st.columns(2)
-
 # ── Map 1: DART Buoys ───────────────────────────────
-with col1:
-    st.subheader("🛰️ NDBC DART Tsunami Buoys (Live Coordinates)")
-    m1 = folium.Map(location=[0, 160], zoom_start=2, tiles="CartoDB positron")
-    for _, buoy in df_dart.iterrows():
-        folium.Marker(
-            location=[buoy["lat"], buoy["lon"]],
-            popup=f"{buoy['name']} ({buoy['station']})",
-            icon=folium.Icon(color="orange", icon="info-sign")
-        ).add_to(m1)
-    folium_static(m1)
+st.subheader("🛰️ NDBC DART Tsunami Buoys (Live Coordinates)")
+m1 = folium.Map(location=[0, 160], zoom_start=2, tiles="CartoDB positron")
+for _, buoy in df_dart.iterrows():
+    folium.Marker(
+        location=[buoy["lat"], buoy["lon"]],
+        popup=f"{buoy['name']} ({buoy['station']})",
+        icon=folium.Icon(color="orange", icon="info-sign")
+    ).add_to(m1)
+folium_static(m1)
 
 # ── Map 2: IOC Sea Level Monitoring ─────────────────
-with col2:
-    st.subheader("🌍 IOC Sea Level Monitoring Stations")
-    m2 = folium.Map(location=[0, 0], zoom_start=2, tiles="CartoDB positron")
-    for _, station in df_ioc.iterrows():
-        color = status_colors.get(station["status"], "gray")
-        popup_text = f"{station['location']}, {station['country']}<br>Lat: {station['lat']}, Lon: {station['lon']}<br>Status: {station['status'].capitalize()}<br>Method: {station['method']}"
-        folium.CircleMarker(
-            location=[station["lat"], station["lon"]],
-            radius=5,
-            color=color,
-            fill=True,
-            fill_opacity=0.7,
-            popup=folium.Popup(popup_text, max_width=300)
-        ).add_to(m2)
-    folium_static(m2)
+st.subheader("🌍 IOC Sea Level Monitoring Stations")
+m2 = folium.Map(location=[0, 0], zoom_start=2, tiles="CartoDB positron")
+for _, station in df_ioc.iterrows():
+    color = status_colors.get(station["status"], "gray")
+    popup_text = f"{station['location']}, {station['country']}<br>Lat: {station['lat']}, Lon: {station['lon']}<br>Status: {station['status'].capitalize()}<br>Method: {station['method']}"
+    folium.CircleMarker(
+        location=[station["lat"], station["lon"]],
+        radius=5,
+        color=color,
+        fill=True,
+        fill_opacity=0.7,
+        popup=folium.Popup(popup_text, max_width=300)
+    ).add_to(m2)
+folium_static(m2)
 
 # ── Optional Data Preview ───────────────────────────
 st.markdown("#### 📋 DART Buoy Metadata")
