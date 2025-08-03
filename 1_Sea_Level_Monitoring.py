@@ -60,7 +60,7 @@ def fetch_dart_metadata_v2(station_ids, startdate="2025-07-29", enddate="2025-07
     return pd.DataFrame(buoy_data)
 
 
-df_dart = fetch_dart_metadata(station_ids)
+df_dart = fetch_dart_metadata_v2(station_ids)
 
 # ── Scrape IOC Station Metadata ─────────────────────
 @st.cache_data
