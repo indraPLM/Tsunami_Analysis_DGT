@@ -383,88 +383,8 @@ with tab3:
     else:
         st.warning("❗ Closest IOC station DataFrame `df_ioc_closest` not found.")
 
-with tab4:
-    st.header("📈 Tide Gauge Analysis with Time Window Selection")
-
-    if "df_ioc" in globals():
-        tide_codes = df_ioc["code"].unique().tolist()
-        selected_code = st.selectbox("Select Tide Station Code", tide_codes, index=0)
-
-        # --- User-Controlled Time Window ---
-        duration_days = st.slider("Select Time Range (Days)", 1, 10, 3)
-        endtime = datetime.utcnow()
-        starttime = endtime - timedelta(days=duration_days)
-        st.write(f"Analyzing data from {starttime.strftime('%Y-%m-%d %H:%M')} to {endtime.strftime('%Y-%m-%d %H:%M')}")
-
-        try:
-            # --- Fetch Tide Data ---
-            data_url = f"https://www.ioc-sealevelmonitoring.org/bgraph.php?code={selected_code}&output=tab&period=0.5&endtime={endtime.strftime('%Y-%m-%dT%H:%M')}"
-            soup_data = BeautifulSoup(requests.get(data_url).content, "html.parser")
-            rows = soup_data.find_all("tr")
-
-            timestamps, levels = [], []
-            for row in rows:
-                cols = row.find_all("td")
-                if len(cols) == 2:
-                    try:
-                        t = datetime.strptime(cols[0].text.strip(), "%Y-%m-%d %H:%M:%S")
-                        if starttime <= t <= endtime:
-                            timestamps.append(t)
-                            levels.append(float(cols[1].text.strip()))
-                    except:
-                        continue
-
-            if not timestamps:
-                st.warning(f"No tide data found for `{selected_code}` in selected range.")
-            else:
-                time_hours = np.array([(t - timestamps[0]).total_seconds() / 3600 for t in timestamps])
-                levels_array = np.array(levels)
-
-                # --- Metadata ---
-                meta_url = f"https://www.ioc-sealevelmonitoring.org/station.php?code={selected_code}&period=0.5&endtime={endtime.strftime('%Y-%m-%dT%H:%M')}"
-                soup_meta = BeautifulSoup(requests.get(meta_url).content, "html.parser")
-
-                def parse_coord(label):
-                    td_label = soup_meta.find("td", class_="field", string=lambda text: text and label in text)
-                    td_value = td_label.find_next_sibling("td", class_="nice")
-                    return float(td_value.text.strip()) if td_value else None
-
-                latitude = parse_coord("Latitude")
-                longitude = parse_coord("Longitude")
-
-                st.success(f"📍 `{selected_code}` → Latitude: {latitude}, Longitude: {longitude}")
-                st.write(f"Records: {len(levels_array)}")
-
-                # --- UTide ---
-                coef = solve(time_hours, levels_array, lat=latitude, method='ols', constit='auto')
-                recon = reconstruct(time_hours, coef)
-                detided = levels_array - recon.h
-
-                # --- Plot ---
-                fig, axs = plt.subplots(2, 1, figsize=(12, 6), sharex=True)
-                axs[0].plot(timestamps, levels_array, color='cornflowerblue')
-                axs[0].set_title("Observed Tide Gauge Data")
-                axs[0].set_ylabel("PWL (m)")
-                axs[0].grid(True)
-
-                axs[1].plot(timestamps, detided, color='orangered')
-                axs[1].set_title("Detided Signal (UTide)")
-                axs[1].set_xlabel("Time (UTC)")
-                axs[1].set_ylabel("Residual (m)")
-                axs[1].grid(True)
-
-                st.pyplot(fig)
-
-        except Exception as e:
-            st.error(f"❌ Error with station `{selected_code}`: {e}")
-
-    else:
-        st.warning("Tide station DataFrame `df_tide` not found.")
-
-
-
 # ── Tab 4 ────────────────────────────────────────────
-with tab5:
+with tab4:
     st.header("🌀 Forward Tsunami Propagation Model")
     st.markdown("Input fault geometry to simulate tsunami wave propagation.")
     length = st.slider("Fault Length (km)", 10, 200, 100)
@@ -475,6 +395,6 @@ with tab5:
     st.info("🖼️ Simulation results would be visualized here.")
 
 # ── Tab 5 ────────────────────────────────────────────
-with tab6:
+with tab5:
     st.header("🔁 Tsunami Source Inversion")
     uploaded_file = st.file_uploader("Upload Tide Gauge Observations (CSV)", type=["csv"])
