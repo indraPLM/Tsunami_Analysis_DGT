@@ -306,82 +306,81 @@ with tab2:
 # ── Tab 3 ────────────────────────────────────────────
 # ── Tab 3 ────────────────────────────────────────────
 with tab3:
-    st.header("📈 Tide Gauge Analysis for Kamchatka Event")
+    st.header("📈 IOC Tide Gauge Detiding Around Kamchatka Event")
+    st.markdown("Displays detided tide gauge plots from the 15 closest IOC stations surrounding the epicenter.")
 
-    if "df_ioc_closest" in globals():
-        tide_codes = df_ioc_closest["code"].unique().tolist()
-        selected_code = st.selectbox("Select Closest IOC Tide Station", tide_codes, index=0)
+    eq_time = datetime.strptime("2025-07-29 23:24:52", "%Y-%m-%d %H:%M:%S")  # UTC
+    gauge_start = "2025-07-29"
+    gauge_end = "2025-07-31"
+    zoom_start = eq_time - timedelta(days=4)
+    zoom_end = eq_time + timedelta(days=1)
 
-        # --- Time Range Selection ---
-        duration_days = st.slider("Select Time Range (Days)", 1, 10, 3)
-        endtime = datetime.utcnow()
-        starttime = endtime - timedelta(days=duration_days)
-        st.write(f"Analyzing data from {starttime.strftime('%Y-%m-%d %H:%M')} to {endtime.strftime('%Y-%m-%d %H:%M')}")
+    for _, row in df_ioc_closest.sort_values("distance_km").head(15).iterrows():
+        selected_code = row["code"]
 
         try:
             # --- Fetch Tide Data ---
-            data_url = f"https://www.ioc-sealevelmonitoring.org/bgraph.php?code={selected_code}&output=tab&period=0.5&endtime={endtime.strftime('%Y-%m-%dT%H:%M')}"
+            data_url = f"https://www.ioc-sealevelmonitoring.org/bgraph.php?code={selected_code}&output=tab&period=0.5&endtime={gauge_end}T23:59"
             soup_data = BeautifulSoup(requests.get(data_url).content, "html.parser")
             rows = soup_data.find_all("tr")
 
             timestamps, levels = [], []
-            for row in rows:
-                cols = row.find_all("td")
+            for row_data in rows:
+                cols = row_data.find_all("td")
                 if len(cols) == 2:
                     try:
                         t = datetime.strptime(cols[0].text.strip(), "%Y-%m-%d %H:%M:%S")
-                        if starttime <= t <= endtime:
+                        if zoom_start <= t <= zoom_end:
                             timestamps.append(t)
                             levels.append(float(cols[1].text.strip()))
                     except:
                         continue
 
             if not timestamps:
-                st.warning(f"No tide data found for `{selected_code}` in selected range.")
-            else:
-                time_hours = np.array([(t - timestamps[0]).total_seconds() / 3600 for t in timestamps])
-                levels_array = np.array(levels)
+                st.warning(f"⚠️ No tide data found for {selected_code}")
+                continue
 
-                # --- Metadata Extraction ---
-                meta_url = f"https://www.ioc-sealevelmonitoring.org/station.php?code={selected_code}&period=0.5&endtime={endtime.strftime('%Y-%m-%dT%H:%M')}"
-                soup_meta = BeautifulSoup(requests.get(meta_url).content, "html.parser")
+            # --- Metadata Extraction ---
+            meta_url = f"https://www.ioc-sealevelmonitoring.org/station.php?code={selected_code}&period=0.5&endtime={gauge_end}T23:59"
+            soup_meta = BeautifulSoup(requests.get(meta_url).content, "html.parser")
 
-                def parse_coord(label):
-                    td_label = soup_meta.find("td", class_="field", string=lambda text: text and label in text)
-                    td_value = td_label.find_next_sibling("td", class_="nice")
-                    return float(td_value.text.strip()) if td_value else None
+            def parse_coord(label):
+                td_label = soup_meta.find("td", class_="field", string=lambda text: text and label in text)
+                td_value = td_label.find_next_sibling("td", class_="nice")
+                return float(td_value.text.strip()) if td_value else None
 
-                latitude = parse_coord("Latitude")
-                longitude = parse_coord("Longitude")
+            lat = parse_coord("Latitude")
+            lon = parse_coord("Longitude")
 
-                st.success(f"📍 `{selected_code}` → Latitude: {latitude}, Longitude: {longitude}")
-                st.write(f"Records: {len(levels_array)}")
+            # --- Detiding ---
+            time_hours = np.array([(t - timestamps[0]).total_seconds() / 3600 for t in timestamps])
+            levels_array = np.array(levels)
+            coef = solve(time_hours, levels_array, lat=lat, method='ols', constit='auto')
+            recon = reconstruct(time_hours, coef)
+            detided = levels_array - recon.h
 
-                # --- Detiding Using UTide ---
-                coef = solve(time_hours, levels_array, lat=latitude, method='ols', constit='auto')
-                recon = reconstruct(time_hours, coef)
-                detided = levels_array - recon.h
+            # --- Plotting ---
+            st.markdown(f"### 🏷️ Station: `{selected_code}`  🌐 Location: ({lat}, {lon})")
+            fig, axs = plt.subplots(2, 1, figsize=(10, 6), sharex=True)
 
-                # --- Plotting ---
-                fig, axs = plt.subplots(2, 1, figsize=(12, 6), sharex=True)
-                axs[0].plot(timestamps, levels_array, color='cornflowerblue')
-                axs[0].set_title("Observed Tide Gauge Data")
-                axs[0].set_ylabel("PWL (m)")
-                axs[0].grid(True)
+            axs[0].plot(timestamps, levels_array, label='Observed', color='steelblue')
+            axs[0].plot(timestamps, recon.h, label='Predicted Tide', color='green', linestyle='--')
+            axs[0].set_ylabel("PWL (m)")
+            axs[0].legend()
+            axs[0].grid(True)
 
-                axs[1].plot(timestamps, detided, color='orangered')
-                axs[1].set_title("Detided Signal (UTide)")
-                axs[1].set_xlabel("Time (UTC)")
-                axs[1].set_ylabel("Residual (m)")
-                axs[1].grid(True)
+            axs[1].plot(timestamps, detided, label='Detided Signal', color='darkred')
+            axs[1].axhline(0, color='black', linestyle='--')
+            axs[1].set_xlabel("UTC Time")
+            axs[1].set_ylabel("Residual (m)")
+            axs[1].legend()
+            axs[1].grid(True)
 
-                st.pyplot(fig)
+            st.pyplot(fig)
 
         except Exception as e:
-            st.error(f"❌ Error with station `{selected_code}`: {e}")
+            st.error(f"❌ Error processing IOC station `{selected_code}`: {e}")
 
-    else:
-        st.warning("❗ Closest IOC station DataFrame `df_ioc_closest` not found.")
 
 # ── Tab 4 ────────────────────────────────────────────
 with tab4:
