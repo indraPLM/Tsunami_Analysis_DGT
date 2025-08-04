@@ -307,20 +307,15 @@ with tab2:
 # ── Tab 3 ────────────────────────────────────────────
 with tab3:
     st.header("📈 IOC Tide Gauge Detiding Around Kamchatka Event")
-    st.markdown("Displays detided tide gauge plots from the 15 closest IOC stations surrounding the epicenter.")
+    st.markdown("Shows detided tide gauge plots from the 15 closest IOC stations using latest 12-hour data window.")
 
-    eq_time = datetime.strptime("2025-07-29 23:24:52", "%Y-%m-%d %H:%M:%S")  # UTC
-    gauge_start = "2025-07-29"
-    gauge_end = "2025-07-31"
-    zoom_start = eq_time - timedelta(days=4)
-    zoom_end = eq_time + timedelta(days=1)
-
+    fixed_endtime = "2025-07-30T10:00"  # Set your target UTC endtime
     for _, row in df_ioc_closest.sort_values("distance_km").head(15).iterrows():
-        selected_code = row["station"]
+        selected_code = row["code"]
 
         try:
             # --- Fetch Tide Data ---
-            data_url = f"https://www.ioc-sealevelmonitoring.org/bgraph.php?code={selected_code}&output=tab&period=0.5&endtime={gauge_end}T23:59"
+            data_url = f"https://www.ioc-sealevelmonitoring.org/bgraph.php?code={selected_code}&output=tab&period=0.5&endtime={fixed_endtime}"
             soup_data = BeautifulSoup(requests.get(data_url).content, "html.parser")
             rows = soup_data.find_all("tr")
 
@@ -330,9 +325,8 @@ with tab3:
                 if len(cols) == 2:
                     try:
                         t = datetime.strptime(cols[0].text.strip(), "%Y-%m-%d %H:%M:%S")
-                        if zoom_start <= t <= zoom_end:
-                            timestamps.append(t)
-                            levels.append(float(cols[1].text.strip()))
+                        timestamps.append(t)
+                        levels.append(float(cols[1].text.strip()))
                     except:
                         continue
 
@@ -341,7 +335,7 @@ with tab3:
                 continue
 
             # --- Metadata Extraction ---
-            meta_url = f"https://www.ioc-sealevelmonitoring.org/station.php?code={selected_code}&period=0.5&endtime={gauge_end}T23:59"
+            meta_url = f"https://www.ioc-sealevelmonitoring.org/station.php?code={selected_code}&period=0.5&endtime={fixed_endtime}"
             soup_meta = BeautifulSoup(requests.get(meta_url).content, "html.parser")
 
             def parse_coord(label):
@@ -360,16 +354,16 @@ with tab3:
             detided = levels_array - recon.h
 
             # --- Plotting ---
-            st.markdown(f"### 🏷️ Station: `{selected_code}`  🌐 Location: ({lat}, {lon})")
+            st.markdown(f"### 🏷️ Station: `{selected_code}` 🌐 Location: ({lat}, {lon})")
             fig, axs = plt.subplots(2, 1, figsize=(10, 6), sharex=True)
 
-            axs[0].plot(timestamps, levels_array, label='Observed', color='steelblue')
-            axs[0].plot(timestamps, recon.h, label='Predicted Tide', color='green', linestyle='--')
+            axs[0].plot(timestamps, levels_array, label='Observed', color='royalblue')
+            axs[0].plot(timestamps, recon.h, label='Predicted Tide', color='limegreen', linestyle='--')
             axs[0].set_ylabel("PWL (m)")
             axs[0].legend()
             axs[0].grid(True)
 
-            axs[1].plot(timestamps, detided, label='Detided Signal', color='darkred')
+            axs[1].plot(timestamps, detided, label='Detided Signal', color='crimson')
             axs[1].axhline(0, color='black', linestyle='--')
             axs[1].set_xlabel("UTC Time")
             axs[1].set_ylabel("Residual (m)")
