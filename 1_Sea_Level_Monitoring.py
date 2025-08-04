@@ -14,14 +14,15 @@ st.set_page_config(page_title="🌊 Tsunami Monitoring Dashboard", layout="wide"
 st.title("🌐 Integrated Tsunami Monitoring & Modeling")
 
 # ── Tab Layout ──────────────────────────────────────
-tab1, tab2, tab3, tab4, tab5 = st.tabs([
+# ── Tab Layout (updated to include Tab6) ─────────────
+tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
     "📍 DART & IOC Monitoring", 
     "📊 Tsunami Analysis - DART", 
     "📈 Tsunami Analysis - Tide Gauge", 
     "🌀 Forward Tsunami Model", 
-    "🔁 Inversion Tsunami Model"
+    "🔁 Inversion Tsunami Model",
+    "🌬️ Volcano Lamb Wave Traveltime"
 ])
-
 # ── Tab 1 ────────────────────────────────────────────
 with tab1:
     st.header("📍 Real-Time Tsunami Buoy & Sea Level Station Monitoring")
@@ -391,3 +392,96 @@ with tab4:
 with tab5:
     st.header("🔁 Tsunami Source Inversion")
     uploaded_file = st.file_uploader("Upload Tide Gauge Observations (CSV)", type=["csv"])
+
+
+# ── Tab 6: Lamb Wave Simulation ─────────────────────
+with tab6:
+    st.header("🌬️ Surface Elevation Response to Atmospheric Lamb Wave")
+
+    # Simulation Parameters
+    st.sidebar.markdown("### 🌬️ Lamb Wave Simulation Parameters")
+    P0 = st.sidebar.number_input("Initial Pressure Pulse (Pa)", value=1200)
+    spread = st.sidebar.number_input("Pulse Width (s)", value=600)
+    c_lamb = st.sidebar.number_input("Lamb Wave Speed (m/s)", value=320)
+    rho_w = st.sidebar.number_input("Water Density (kg/m³)", value=1025)
+    decay_scale = st.sidebar.slider("Decay Scale (km)", 100, 2000, 500) * 1000
+
+    source_lat = st.sidebar.number_input("Source Latitude", value=-12.9)
+    source_lon = st.sidebar.number_input("Source Longitude", value=45.7)
+    source_coord = (source_lat, source_lon)
+
+    # Region of Interest
+    lat_min, lat_max = -60.0, 40.0
+    lon_min, lon_max = 10.0, 160.0
+
+    # Load Bathymetry Dataset
+    import xarray as xr
+    import numpy as np
+    from haversine import haversine
+    from cartopy import geodesic
+    import cartopy.crs as ccrs
+    import cartopy.feature as cfeature
+    from matplotlib.colors import Normalize
+
+    try:
+        ds = xr.open_dataset("resampled_bathymetry_5min.nc")
+        depth = ds["resampled_elevation"].sel(lat=slice(lat_min, lat_max), lon=slice(lon_min, lon_max))
+        lat = depth["lat"].values
+        lon = depth["lon"].values
+    except:
+        st.error("❌ Failed to load `resampled_bathymetry_5min.nc`. Please check the path or file format.")
+        st.stop()
+
+    # Distance Grid Calculation
+    distance_grid = np.zeros(depth.shape)
+    for i in range(len(lat)):
+        for j in range(len(lon)):
+            distance_grid[i, j] = haversine(source_coord, (lat[i], lon[j])) * 1000
+    distance_km_grid = distance_grid / 1000
+
+    # Simulate Wave Response
+    st.info("🌀 Simulating surface elevation...")
+    t = np.linspace(0, 86400, 480)
+    eta_cube = np.zeros((len(t), *depth.shape))
+
+    for k, t_now in enumerate(t):
+        position = t_now * c_lamb
+        decay = np.exp(-distance_grid / decay_scale)
+        pulse = P0 * np.exp(-((distance_grid - position)**2) / (2 * (spread * c_lamb)**2))
+        pressure = pulse * decay
+        eta_cube[k] = pressure / (rho_w * 9.81) * 100  # Convert to cm
+
+    # Max Elevation Plot
+    max_eta = np.max(eta_cube, axis=0)
+    max_distance_km = 12000
+    masked_eta = np.ma.masked_where((max_eta < 0.001) | (distance_km_grid > max_distance_km), max_eta)
+
+    st.subheader("🗺️ Maximum Surface Elevation Map")
+    fig, ax = plt.subplots(figsize=(12, 8), subplot_kw={"projection": ccrs.PlateCarree()})
+    ax.set_extent([lon_min, lon_max, lat_min, lat_max])
+    ax.add_feature(cfeature.NaturalEarthFeature("physical", "coastline", "10m", edgecolor="black", facecolor="none", linewidth=0.8))
+    ax.add_feature(cfeature.BORDERS, linestyle=":", edgecolor="gray")
+    ax.gridlines(draw_labels=True)
+
+    levels = np.linspace(0.001, np.nanmax(masked_eta), 60)
+    contour = ax.contourf(lon, lat, masked_eta, levels=levels, transform=ccrs.PlateCarree(),
+                          cmap="viridis", extend="max", alpha=0.9)
+    plt.colorbar(contour, ax=ax, orientation="vertical", pad=0.05,
+                 label="Max Surface Elevation (cm)")
+
+    # Travel Time Rings
+    for hour in range(1, 10):
+        radius_km = int(hour * 3600 * c_lamb / 1000)
+        ring = geodesic.Geodesic().circle(lon=source_coord[1], lat=source_coord[0], radius=radius_km * 1000, n_samples=360)
+        ax.plot(ring[:, 0], ring[:, 1], color="gray", linestyle=":", linewidth=0.6, transform=ccrs.PlateCarree())
+        for idx in [0, 135, 225]:
+            ring_lon, ring_lat = ring[idx]
+            offset = {"x": 0.5 if idx == 135 else -0.5 if idx == 225 else 0.5, "y": -0.5 if idx in [135, 225] else 0}
+            if lon_min < ring_lon < lon_max and lat_min < ring_lat < lat_max:
+                ax.text(ring_lon + offset["x"], ring_lat + offset["y"], f"{hour} hr",
+                        transform=ccrs.PlateCarree(), fontsize=7, color="gray",
+                        bbox=dict(facecolor="white", edgecolor="none", alpha=0.5, boxstyle="round"))
+
+    ax.set_title("Maximum Surface Elevation from Atmospheric Lamb Wave\n(Fani Maoré Event at 320 m/s)")
+    plt.tight_layout()
+    st.pyplot(fig)
