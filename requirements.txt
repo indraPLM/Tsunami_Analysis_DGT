@@ -13,6 +13,8 @@ cartopy
 streamlit_pdf_viewer
 utide
 xarray
+cartopy
+haversine
 shapely
 pyproj
 plotly
