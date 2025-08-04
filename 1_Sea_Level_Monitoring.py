@@ -229,13 +229,16 @@ with tab2:
     st.markdown("Displays detided data from the 15 closest DART stations surrounding epicenter.")
 
     eq_time = datetime.strptime("2025-07-29 23:24:52", "%Y-%m-%d %H:%M:%S")  # UTC
+    dart_start= "2025-07-29"
+    dart_end="2025-07-31"
     zoom_start = eq_time - pd.Timedelta(hours=4*24)
     zoom_end = eq_time + pd.Timedelta(hours=1*24)
 
     # Use the 15 closest DART stations from your DataFrame
     for _, row in df_dart_closest.sort_values("distance_km").head(15).iterrows():
         station = row["station"]
-        url = f"https://www.ndbc.noaa.gov/station_page.php?station={station}&type=1"
+        #url = f"https://www.ndbc.noaa.gov/station_page.php?station={station}&type=1"
+        url = f"https://www.ndbc.noaa.gov/station_page.php?station={station}&type=1&startdate={dart_start}&enddate={dart_end}"
 
         try:
             response = requests.get(url)
@@ -265,10 +268,11 @@ with tab2:
             df.sort_values('datetime', inplace=True)
 
             # Filter data window
-            df_window = df[(df['datetime'] >= zoom_start) & (df['datetime'] <= zoom_end)].copy()
-            if df_window.empty:
-                st.info(f"ℹ️ No valid time range data at {station}")
-                continue
+            #df_window = df[(df['datetime'] >= zoom_start) & (df['datetime'] <= zoom_end)].copy()
+            #if df_window.empty:
+            #    st.info(f"ℹ️ No valid time range data at {station}")
+            #    continue
+            df_window = df.copy()
 
             # Harmonic detiding
             time_array = np.array(df_window['datetime'].to_list())
@@ -298,9 +302,6 @@ with tab2:
 
         except Exception as e:
             st.error(f"❌ Error processing station {station}: {e}")
-
-
-
 
 # ── Tab 3 ────────────────────────────────────────────
 with tab3:
