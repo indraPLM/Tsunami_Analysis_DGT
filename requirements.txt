@@ -12,6 +12,7 @@ streamlit-folium==0.6.13
 cartopy
 streamlit_pdf_viewer
 utide
+xarray
 shapely
 pyproj
 plotly
