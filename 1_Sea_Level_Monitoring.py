@@ -316,7 +316,7 @@ with tab3:
     zoom_end = eq_time + timedelta(days=1)
 
     for _, row in df_ioc_closest.sort_values("distance_km").head(15).iterrows():
-        selected_code = row["code"]
+        selected_code = row["station"]
 
         try:
             # --- Fetch Tide Data ---
