@@ -423,7 +423,7 @@ with tab6:
     from matplotlib.colors import Normalize
 
     try:
-        ds = xr.open_dataset("resampled_bathymetry_5min.nc")
+        ds = xr.open_dataset("./resampled_bathymetry_5min.nc")
         depth = ds["resampled_elevation"].sel(lat=slice(lat_min, lat_max), lon=slice(lon_min, lon_max))
         lat = depth["lat"].values
         lon = depth["lon"].values
