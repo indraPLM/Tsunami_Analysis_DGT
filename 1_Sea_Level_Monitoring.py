@@ -399,12 +399,11 @@ with tab6:
     st.header("🌬️ Surface Elevation Response to Atmospheric Lamb Wave")
 
     # Simulation Parameters
-    st.sidebar.markdown("### 🌬️ Lamb Wave Simulation Parameters")
-    P0 = st.sidebar.number_input("Initial Pressure Pulse (Pa)", value=1200)
-    spread = st.sidebar.number_input("Pulse Width (s)", value=600)
-    c_lamb = st.sidebar.number_input("Lamb Wave Speed (m/s)", value=320)
-    rho_w = st.sidebar.number_input("Water Density (kg/m³)", value=1025)
-    decay_scale = st.sidebar.slider("Decay Scale (km)", 100, 2000, 500) * 1000
+    P0 = 1200.0
+    spread = 600.0
+    c_lamb = 320.0
+    rho_w = 1025.0
+    decay_scale = 500 * 1000
 
     source_lat = st.sidebar.number_input("Source Latitude", value=-12.9)
     source_lon = st.sidebar.number_input("Source Longitude", value=45.7)
