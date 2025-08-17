@@ -619,15 +619,20 @@ with tab6:
     from matplotlib.colors import Normalize
 
     uploaded_file = st.file_uploader("Upload Bathymetry NetCDF", type=["nc"])
-    try:
-        ds = xr.open_dataset(uploaded_file)
-        depth = ds["resampled_elevation"].sel(lat=slice(lat_min, lat_max), lon=slice(lon_min, lon_max))
-        lat = depth["lat"].values
-        lon = depth["lon"].values
-    except:
-        st.error("❌ Failed to load `resampled_bathymetry_5min.nc`. Please check the path or file format.")
+    if uploaded_file is not None:
+        try:
+            ds = xr.open_dataset(uploaded_file)
+            depth = ds["resampled_elevation"].sel(lat=slice(lat_min, lat_max), lon=slice(lon_min, lon_max))
+            lat = depth["lat"].values
+            lon = depth["lon"].values
+        except Exception as e:
+            st.error(f"❌ Failed to load NetCDF file: {e}")
+            st.stop()
+    else:
+        st.warning("📂 Please upload a NetCDF bathymetry file to proceed.")
         st.stop()
 
+    
     # Distance Grid Calculation
     distance_grid = np.zeros(depth.shape)
     for i in range(len(lat)):
