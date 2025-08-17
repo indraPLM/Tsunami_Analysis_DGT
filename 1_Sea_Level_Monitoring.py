@@ -378,13 +378,130 @@ with tab3:
 # ── Tab 4 ────────────────────────────────────────────
 with tab4:
     st.header("🌀 Forward Tsunami Propagation Model")
-    st.markdown("Input fault geometry to simulate tsunami wave propagation.")
-    length = st.slider("Fault Length (km)", 10, 200, 100)
-    width = st.slider("Fault Width (km)", 10, 100, 50)
-    slip = st.slider("Slip Amount (m)", 0.1, 20.0, 2.0)
-    depth = st.slider("Depth (km)", 5, 50, 20)
-    st.button("Run Simulation")
-    st.info("🖼️ Simulation results would be visualized here.")
+    st.markdown("Input earthquake magnitude and select scaling law to estimate fault geometry and simulate tsunami wave propagation.")
+
+    # ── User Inputs ───────────────────────────────
+    magnitude = st.slider("Moment Magnitude (Mw)", 6.0, 9.5, 8.0, 0.1)
+    model = st.selectbox("Scaling Law Model", ['Well_Coopersmith', 'Papazachos', 'Blesser', 'Stresser'])
+    strike_deg = st.slider("Strike Angle (°)", 0, 360, 45)
+    slip_m = st.slider("Slip Amount (m)", 0.1, 20.0, 2.0)
+    depth_km = st.slider("Depth to Top of Fault (km)", 5, 50, 20)
+    n_length = st.number_input("Segments Along Length", 1, 20, 4)
+    n_width = st.number_input("Segments Along Width", 1, 20, 4)
+    center_lon = st.number_input("Center Longitude", -180.0, 180.0, 110.0)
+    center_lat = st.number_input("Center Latitude", -90.0, 90.0, -12.0)
+
+    # ── Scaling Law Function ────────────────────────
+    def compute_fault_dimensions(Mw, model):
+        if model == 'Well_Coopersmith':
+            logL = (Mw - 4.38) / 1.49
+            logW = (Mw - 4.06) / 2.25
+            logDmax = -1.38 + 1.02 * logL
+            logDave = -1.43 + 0.88 * logL
+        elif model == 'Papazachos':
+            logL = -2.19 + 0.55 * Mw
+            logW = -0.63 + 0.31 * Mw
+            logDmax = logDave = -2.78 + 0.64 * Mw
+        elif model == 'Blesser':
+            logL = -2.19 + 0.55 * Mw
+            logW = -1.36 + 0.38 * Mw
+            logDmax = logDave = None
+        elif model == 'Stresser':
+            logL = -3.03 + 0.63 * Mw
+            logW = -1.01 + 0.35 * Mw
+            logDmax = -4.73 + 0.71 * Mw
+            logDave = -4.81 + 0.66 * Mw
+        else:
+            raise ValueError("Unknown model")
+
+        length_km = 10 ** logL
+        width_km  = 10 ** logW
+        Dmax_cm   = 10 ** logDmax if logDmax is not None else None
+        Dave_cm   = 10 ** logDave if logDave is not None else None
+
+        return length_km, width_km, Dmax_cm, Dave_cm
+
+    run = st.button("Run Simulation")
+
+    if run:
+        # ── Compute Fault Dimensions ─────────────────────
+        length_km, width_km, Dmax_cm, Dave_cm = compute_fault_dimensions(magnitude, model)
+
+        # ── Convert km to degrees ─────────────────────
+        km_per_deg_lat = 111.0
+        km_per_deg_lon = 111.0 * np.cos(np.radians(center_lat))
+        dx_total = length_km / km_per_deg_lon
+        dy_total = width_km / km_per_deg_lat
+        dx_cell = dx_total / n_length
+        dy_cell = dy_total / n_width
+
+        # ── Rotation Matrix ──────────────────────────
+        strike_rad = np.radians(strike_deg)
+        cos_s = np.cos(strike_rad)
+        sin_s = np.sin(strike_rad)
+
+        # ── Segment Computation ──────────────────────
+        segment_centers = []
+        segment_polygons = []
+
+        for i in range(n_length):
+            for j in range(n_width):
+                x = -dx_total/2 + dx_cell/2 + i * dx_cell
+                y = -dy_total/2 + dy_cell/2 + j * dy_cell
+
+                dlon = x * cos_s - y * sin_s
+                dlat = x * sin_s + y * cos_s
+                lon = center_lon + dlon
+                lat = center_lat + dlat
+                segment_centers.append((lon, lat))
+
+                corners = np.array([
+                    [-dx_cell/2, -dy_cell/2],
+                    [ dx_cell/2, -dy_cell/2],
+                    [ dx_cell/2,  dy_cell/2],
+                    [-dx_cell/2,  dy_cell/2],
+                    [-dx_cell/2, -dy_cell/2]
+                ])
+                rotated = []
+                for cx, cy in corners:
+                    rx = x + cx
+                    ry = y + cy
+                    dlon = rx * cos_s - ry * sin_s
+                    dlat = rx * sin_s + ry * cos_s
+                    rotated.append((center_lon + dlon, center_lat + dlat))
+                segment_polygons.append(Polygon(rotated))
+
+        # ── Visualization ────────────────────────────
+        st.subheader("📍 Fault Grid Visualization")
+        fig = plt.figure(figsize=(8, 6))
+        ax = plt.axes(projection=ccrs.PlateCarree())
+        ax.set_extent([center_lon - 8, center_lon + 8, center_lat - 8, center_lat + 8])
+        ax.add_feature(cfeature.LAND)
+        ax.add_feature(cfeature.OCEAN)
+        ax.add_feature(cfeature.COASTLINE, linewidth=1)
+        ax.add_feature(cfeature.BORDERS, linestyle=':')
+
+        for poly in segment_polygons:
+            ax.add_geometries([poly], crs=ccrs.PlateCarree(),
+                              facecolor='none', edgecolor='red', linewidth=0.8)
+
+        ax.plot(center_lon, center_lat, marker='o', color='blue', markersize=6)
+        ax.text(center_lon, center_lat + 0.5, "Center", ha='center', fontsize=9)
+        ax.set_title(f"{n_length}×{n_width} Fault Grid\nMw {magnitude:.1f}, Strike: {strike_deg}°", fontsize=12)
+        st.pyplot(fig)
+
+        # ── Summary ─────────────────────────────────
+        st.markdown(f"**Scaling Model**: `{model}`")
+        st.markdown(f"**Estimated Length** = {length_km:.1f} km, **Width** = {width_km:.1f} km")
+        st.markdown(f"**Slip** = {slip_m:.2f} m, **Depth** = {depth_km:.1f} km")
+        if Dmax_cm: st.markdown(f"**Max Displacement** = {Dmax_cm:.2f} cm")
+        if Dave_cm: st.markdown(f"**Avg Displacement** = {Dave_cm:.2f} cm")
+        st.markdown(f"**Segments** = {n_length} × {n_width} = {n_length * n_width}")
+        st.success("✅ Fault grid generated from magnitude scaling law.")
+
+    else:
+        st.info("🖼️ Simulation results would be visualized here after you run the model.")
+
 
 # ── Tab 5 ────────────────────────────────────────────
 with tab5:
