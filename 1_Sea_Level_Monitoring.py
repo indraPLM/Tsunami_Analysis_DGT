@@ -495,14 +495,14 @@ with tab4:
                               facecolor='none', edgecolor='red', linewidth=0.8)
 
         ax.plot(center_lon, center_lat, marker='o', color='blue', markersize=6)
-        ax.text(center_lon, center_lat + 0.5, "Center", ha='center', fontsize=9)
-        ax.set_title(f"{n_length}×{n_width} Fault Grid\nMw {magnitude:.1f}, Strike: {strike_deg}°", fontsize=12)
+        ax.text(center_lon, center_lat + 0.5, "Epic", ha='center', fontsize=9)
+        #ax.set_title(f"{n_length}×{n_width} Fault Grid\nMw {magnitude:.1f}, Strike: {strike_deg}°", fontsize=12)
         st.pyplot(fig)
 
         # ── Summary ─────────────────────────────────
         st.markdown(f"**Scaling Model**: `{model}`")
         st.markdown(f"**Estimated Length** = {length_km:.1f} km, **Width** = {width_km:.1f} km")
-        st.markdown(f"**Slip** = {slip_m:.2f} m, **Depth** = {depth_km:.1f} km")
+        st.markdown(f"**Slip** = {Dmax_cm:.2f} m, **Depth** = {depth_km:.1f} km")
         if Dmax_cm: st.markdown(f"**Max Displacement** = {Dmax_cm:.2f} cm")
         if Dave_cm: st.markdown(f"**Avg Displacement** = {Dave_cm:.2f} cm")
         st.markdown(f"**Segments** = {n_length} × {n_width} = {n_length * n_width}")
