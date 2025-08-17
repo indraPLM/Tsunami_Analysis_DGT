@@ -376,17 +376,19 @@ with tab4:
     st.markdown("Input earthquake magnitude and select scaling law to estimate fault geometry and simulate tsunami wave propagation.")
 
     # ── User Inputs ───────────────────────────────
-    col1, col2 = st.columns(2)
+    col1, col2, col3, col4 = st.columns(4)
 
     with col1:
-        magnitude = st.slider("Moment Magnitude (Mw)", 6.0, 9.5, 8.0, 0.1)
+        magnitude = st.number_input("Moment Magnitude (Mw)", 6.0, 9.5, 8.0)
         model = st.selectbox("Scaling Law Model", ['Well_Coopersmith', 'Papazachos', 'Blesser', 'Stresser'])
-        strike_deg = st.slider("Strike Angle (°)", 0, 360, 45)
-        depth_km = st.slider("Depth to Top of Fault (km)", 5, 50, 20)
-
     with col2:
+        strike_deg = st.number_input("Strike Angle (°)", 0, 360, 45)
+        depth_km = st.number_input("Depth to Top of Fault (km)", 5, 60, 20)
+
+    with col3:
         n_length = st.number_input("Segments Along Length", 1, 20, 4)
         n_width = st.number_input("Segments Along Width", 1, 20, 4)
+    with col4:
         center_lon = st.number_input("Center Longitude", -180.0, 180.0, 110.0)
         center_lat = st.number_input("Center Latitude", -90.0, 90.0, -12.0)
 
