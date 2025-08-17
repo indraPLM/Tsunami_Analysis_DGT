@@ -595,8 +595,8 @@ with tab6:
     rho_w = 1025.0
     decay_scale = 500 * 1000
 
-    source_lat = st.sidebar.number_input("Source Latitude", value=-12.9)
-    source_lon = st.sidebar.number_input("Source Longitude", value=45.7)
+    source_lat = st.number_input("Source Latitude", value=-12.9)
+    source_lon = st.number_input("Source Longitude", value=45.7)
     source_coord = (source_lat, source_lon)
 
     # Region of Interest
