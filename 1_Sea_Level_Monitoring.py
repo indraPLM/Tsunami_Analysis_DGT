@@ -486,7 +486,7 @@ with tab4:
             scale='10m',
             facecolor='none',
             edgecolor='black',
-            linewidth=1
+            linewidth=0.5
         ))
         ax.add_feature(cfeature.BORDERS, linestyle=':')
 
@@ -502,10 +502,15 @@ with tab4:
         # ── Summary ─────────────────────────────────
         st.markdown(f"**Scaling Model**: `{model}`")
         st.markdown(f"**Estimated Length** = {length_km:.1f} km, **Width** = {width_km:.1f} km")
-        st.markdown(f"**Slip** = {Dmax_cm:.2f} m, **Depth** = {depth_km:.1f} km")
+        st.markdown(f"**Depth** = {depth_km:.1f} km")
         if Dmax_cm: st.markdown(f"**Max Displacement** = {Dmax_cm:.2f} cm")
         if Dave_cm: st.markdown(f"**Avg Displacement** = {Dave_cm:.2f} cm")
         st.markdown(f"**Segments** = {n_length} × {n_width} = {n_length * n_width}")
+
+        st.markdown(f"**Segment Centers**:")
+        for idx, (lon, lat) in enumerate(segment_centers):
+            st.markdown(f"Segment {idx+1:3d}: Lon = {lon:.4f}, Lat = {lat:.4f}")
+        
         st.success("✅ Fault grid generated from magnitude scaling law.")
 
     else:
