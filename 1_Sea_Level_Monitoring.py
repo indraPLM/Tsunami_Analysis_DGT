@@ -300,12 +300,11 @@ with tab2:
             st.error(f"❌ Error processing station {station}: {e}")
 
 # ── Tab 3 ────────────────────────────────────────────
-# ── Tab 3 ────────────────────────────────────────────
 with tab3:
     st.header("📈 IOC Tide Gauge Detiding Around Kamchatka Event")
     st.markdown("Shows detided tide gauge plots from the 15 closest IOC stations using latest 12-hour data window.")
 
-    fixed_endtime = "2025-07-30T10:00"  # Set your target UTC endtime
+    fixed_endtime = "2025-07-30"  # Set your target UTC endtime
     for _, row in df_ioc_closest.sort_values("distance_km").head(15).iterrows():
         selected_code = row["code"]
 
