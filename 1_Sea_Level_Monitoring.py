@@ -213,39 +213,35 @@ with tab1:
     df_ioc_revised.index = range(1, len(df_ioc_revised)+1)
     st.dataframe(df_ioc_revised)
 
-    
 # ── Tab 2: Tsunami Analysis ─────────────────────────────
 import os
 import requests
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-from datetime import timedelta
+from datetime import datetime, timedelta
 import re
 from bs4 import BeautifulSoup
-from utide import solve, reconstruct
+from scipy.interpolate import UnivariateSpline
 
 with tab2:
     st.header("🌊 DART Buoy Detiding Around Earthquake")
     st.markdown("Displays detided data from the 15 closest DART stations surrounding epicenter.")
 
     eq_time = datetime.strptime("2025-07-29 23:24:52", "%Y-%m-%d %H:%M:%S")  # UTC
-    dart_start= "2025-07-29"
-    dart_end="2025-07-31"
+    dart_start = "2025-07-29"
+    dart_end = "2025-07-31"
     zoom_start = eq_time - pd.Timedelta(hours=4*24)
     zoom_end = eq_time + pd.Timedelta(hours=1*24)
 
-    # Use the 15 closest DART stations from your DataFrame
     for _, row in df_dart_closest.sort_values("distance_km").head(15).iterrows():
         station = row["station"]
-        #url = f"https://www.ndbc.noaa.gov/station_page.php?station={station}&type=1"
         url = f"https://www.ndbc.noaa.gov/station_page.php?station={station}&type=1&startdate={dart_start}&enddate={dart_end}"
 
         try:
             response = requests.get(url)
             soup = BeautifulSoup(response.text, "html.parser")
 
-            # Station title and location
             h1_tag = soup.find("h1")
             title = h1_tag.text.strip() if h1_tag else f"DART {station}"
             script = soup.find("script", string=re.compile("currentstnid"))
@@ -255,7 +251,6 @@ with tab2:
             lat = float(lat_match.group(1)) if lat_match else 0.0
             lon = float(lng_match.group(1)) if lng_match else 0.0
 
-            # Parse buoy data
             textarea = soup.find("textarea", attrs={"name": "data"})
             if not textarea:
                 st.warning(f"⚠️ No data found for {station}")
@@ -268,26 +263,24 @@ with tab2:
             df['datetime'] = pd.to_datetime(df[['year','month','day','hour','minute','second']])
             df.sort_values('datetime', inplace=True)
 
-            # Filter data window
-            #df_window = df[(df['datetime'] >= zoom_start) & (df['datetime'] <= zoom_end)].copy()
-            #if df_window.empty:
-            #    st.info(f"ℹ️ No valid time range data at {station}")
-            #    continue
             df_window = df.copy()
 
-            # Harmonic detiding
-            time_array = np.array(df_window['datetime'].to_list())
-            coef = solve(time_array, df_window['HEIGHT'].values, lat=lat, method='ols', conf_int='MC')
-            recon = reconstruct(time_array, coef)
-            df_window['predicted_tide'] = recon.h
-            df_window['detrended'] = df_window['HEIGHT'] - df_window['predicted_tide']
+            # Spline detiding
+            timestamps = (df_window['datetime'] - df_window['datetime'].min()).dt.total_seconds().values
+            heights = df_window['HEIGHT'].values
 
-            # Plot observed vs predicted tide and anomaly
+            # Fit spline (adjust s for smoothness; s=0 fits exactly)
+            spline = UnivariateSpline(timestamps, heights, s=1e2)
+            predicted_tide = spline(timestamps)
+            df_window['predicted_tide'] = predicted_tide
+            df_window['detrended'] = df_window['HEIGHT'] - predicted_tide
+
+            # Plotting
             st.markdown(f"### 🌐 Station: {station} ({title})")
             fig, axs = plt.subplots(2, 1, figsize=(10, 6), sharex=True)
 
             axs[0].plot(df_window['datetime'], df_window['HEIGHT'], label='Observed', color='blue')
-            axs[0].plot(df_window['datetime'], df_window['predicted_tide'], label='Predicted Tide', color='green', linestyle='--')
+            axs[0].plot(df_window['datetime'], df_window['predicted_tide'], label='Spline Fit', color='green', linestyle='--')
             axs[0].set_ylabel("Height (m)")
             axs[0].legend()
             axs[0].grid(True)
