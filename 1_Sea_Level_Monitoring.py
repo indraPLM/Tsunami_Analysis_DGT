@@ -269,7 +269,7 @@ with tab2:
             heights = df_window['HEIGHT'].values
 
             # Fit high-order polynomial (e.g., degree 10)
-            degree = 10
+            degree = 30
             poly_coeffs = np.polyfit(timestamps, heights, deg=degree)
             poly_func = np.poly1d(poly_coeffs)
             predicted_tide = poly_func(timestamps)
