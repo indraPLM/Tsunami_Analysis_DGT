@@ -479,7 +479,15 @@ with tab4:
         ax.set_extent([center_lon - 8, center_lon + 8, center_lat - 8, center_lat + 8])
         ax.add_feature(cfeature.LAND)
         ax.add_feature(cfeature.OCEAN)
-        ax.add_feature(cfeature.COASTLINE, linewidth=1)
+        #ax.add_feature(cfeature.COASTLINE, linewidth=1)
+        ax.add_feature(cfeature.NaturalEarthFeature(
+            category='physical',
+            name='coastline',
+            scale='10m',
+            facecolor='none',
+            edgecolor='black',
+            linewidth=1
+        ))
         ax.add_feature(cfeature.BORDERS, linestyle=':')
 
         for poly in segment_polygons:
