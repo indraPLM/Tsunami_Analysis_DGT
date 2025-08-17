@@ -3,11 +3,15 @@ import pandas as pd
 import folium
 from streamlit_folium import folium_static
 from folium.plugins import Fullscreen
-import requests
+import os,re,requests
 from bs4 import BeautifulSoup
-import re
-import matplotlib.pyplot as plt
 from utide import solve, reconstruct
+import matplotlib.pyplot as plt
+import cartopy.crs as ccrs
+import cartopy.feature as cfeature
+from shapely.geometry import Polygon
+import numpy as np
+from datetime import datetime, timedelta
 
 # ── Page Configuration ──────────────────────────────
 st.set_page_config(page_title="🌊 Tsunami Monitoring Dashboard", layout="wide")
@@ -214,15 +218,6 @@ with tab1:
     st.dataframe(df_ioc_revised)
 
 # ── Tab 2: Tsunami Analysis ─────────────────────────────
-import os
-import requests
-import pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt
-from datetime import datetime, timedelta
-import re
-from bs4 import BeautifulSoup
-
 with tab2:
     st.header("🌊 DART Buoy Detiding Around Earthquake")
     st.markdown("Displays detided data from the 15 closest DART stations surrounding epicenter.")
