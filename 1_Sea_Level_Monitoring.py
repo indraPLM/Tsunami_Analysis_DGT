@@ -601,8 +601,8 @@ with tab6:
         decay_scale = st.number_input("Pressure decay scale (m)", 400000, 800000, 500000)
         g = st.number_input("Gravity (m/s³)", 9.5, 10.0, 9.81)
     with col4:
-        source_lat = st.number_input("Source Longitude", -180.0, 180.0, 45.7)
-        source_lon = st.number_input("Source Latitude", -90.0, 90.0, -12.9)
+        source_lon = st.number_input("Source Longitude", -180.0, 180.0, 45.7)
+        source_lat = st.number_input("Source Latitude", -90.0, 90.0, -12.9)
     source_coord = (source_lat, source_lon)
 
     # Region of Interest
