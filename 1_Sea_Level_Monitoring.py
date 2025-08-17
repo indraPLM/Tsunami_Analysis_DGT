@@ -588,15 +588,21 @@ with tab5:
 with tab6:
     st.header("🌬️ Surface Elevation Response to Atmospheric Lamb Wave")
 
-    # Simulation Parameters
-    P0 = 1200.0
-    spread = 600.0
-    c_lamb = 320.0
-    rho_w = 1025.0
-    decay_scale = 500 * 1000
+    # ── User Inputs Physical & Source Parameters ────────
+    col1, col2, col3, col4 = st.columns(4)
 
-    source_lat = st.number_input("Source Latitude", value=-12.9)
-    source_lon = st.number_input("Source Longitude", value=45.7)
+    with col1:
+        P0 = st.number_input("Initial pressure pulse (Pa)", 1000.0, 2000.0, 1200.0)
+        spread = st.number_input("Pulse width (s)", 200.0, 1000.0, 600.0)
+    with col2:
+        c_lamb = st.number_input("Lamb wave speed (m/s)", 250.0, 350.0, 320.0)
+        rho_w = st.number_input("Water density (kg/m³)", 900.0, 1500.0, 1025.0)
+    with col3:
+        decay_scale = st.number_input("Pressure decay scale (m)", 400000, 800000, 500000)
+        g = st.number_input("Gravity (m/s³)", 9.5, 10.0, 9.81)
+    with col4:
+        source_lat = st.number_input("Source Longitude", -180.0, 180.0, 45.7)
+        source_lon = st.number_input("Source Latitude", -90.0, 90.0, -12.9)
     source_coord = (source_lat, source_lon)
 
     # Region of Interest
@@ -613,7 +619,7 @@ with tab6:
     from matplotlib.colors import Normalize
 
     try:
-        ds = xr.open_dataset(f"./resampled_bathymetry_5min.nc")
+        ds = xr.open_dataset(f"resampled_bathymetry_5min.nc")
         depth = ds["resampled_elevation"].sel(lat=slice(lat_min, lat_max), lon=slice(lon_min, lon_max))
         lat = depth["lat"].values
         lon = depth["lon"].values
