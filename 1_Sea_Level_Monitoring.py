@@ -429,6 +429,9 @@ with tab4:
         length_km, width_km, Dmax_cm, Dave_cm = compute_fault_dimensions(magnitude, model)
 
         # Convert km to degrees
+        # ── Conversion: km to degrees (approximate) ─
+        km_per_deg_lat = 111.0
+        km_per_deg_lon = 111.0 * np.cos(np.radians(center_lat))
         dx = length_km / (2 * km_per_deg_lon)
         dy = width_km / (2 * km_per_deg_lat)
 
