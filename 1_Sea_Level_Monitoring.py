@@ -604,7 +604,8 @@ with tab6:
         source_lon = st.number_input("Source Longitude", -180.0, 180.0, 45.7)
         source_lat = st.number_input("Source Latitude", -90.0, 90.0, -12.9)
     source_coord = (source_lat, source_lon)
-
+    title = st.text_input("Source Location Name", value=" ")
+    
     # Region of Interest
     lat_min, lat_max = -60.0, 40.0
     lon_min, lon_max = 10.0, 160.0
@@ -683,6 +684,6 @@ with tab6:
                         transform=ccrs.PlateCarree(), fontsize=7, color="gray",
                         bbox=dict(facecolor="white", edgecolor="none", alpha=0.5, boxstyle="round"))
 
-    ax.set_title("Maximum Surface Elevation from Atmospheric Lamb Wave\n(Fani Maoré Event at 320 m/s)")
+    ax.set_title(f"Maximum Surface Elevation Caused {title}\n with Atmospheric Lamb Wave {c_lamb} m/s)")
     plt.tight_layout()
     st.pyplot(fig)
