@@ -428,6 +428,34 @@ with tab4:
         # ── Compute Fault Dimensions ─────────────────────
         length_km, width_km, Dmax_cm, Dave_cm = compute_fault_dimensions(magnitude, model)
 
+        # Convert km to degrees
+        dx = length_km / (2 * km_per_deg_lon)
+        dy = width_km / (2 * km_per_deg_lat)
+
+        # ── Rotation matrix ────────────────────────
+        strike_rad = np.radians(strike_deg)
+        cos_s = np.cos(strike_rad)
+        sin_s = np.sin(strike_rad)
+
+        # Define rectangle corners relative to center
+        local_coords = np.array([
+            [-dx, -dy],
+            [ dx, -dy],
+            [ dx,  dy],
+            [-dx,  dy],
+            [-dx, -dy]
+        ])
+
+        # Rotate and translate to geographic coordinates
+        rotated_coords = []
+        for x, y in local_coords:
+            dlon = x * cos_s - y * sin_s
+            dlat = x * sin_s + y * cos_s
+            rotated_coords.append((center_lon + dlon, center_lat + dlat))
+
+        rectangle = Polygon(rotated_coords)
+        
+
         # ── Convert km to degrees ─────────────────────
         km_per_deg_lat = 111.0
         km_per_deg_lon = 111.0 * np.cos(np.radians(center_lat))
@@ -472,9 +500,39 @@ with tab4:
                     rotated.append((center_lon + dlon, center_lat + dlat))
                 segment_polygons.append(Polygon(rotated))
 
+        
+        # ── Visualization ────────────────────────────
+        st.subheader("📍 Fault Visualization")
+        fig1 = plt.figure(figsize=(8, 6))
+        ax = plt.axes(projection=ccrs.PlateCarree())
+        ax.set_extent([center_lon - 8, center_lon + 8, center_lat - 8, center_lat + 8])
+        ax.add_feature(cfeature.LAND)
+        ax.add_feature(cfeature.OCEAN)
+        #ax.add_feature(cfeature.COASTLINE, linewidth=1)
+        ax.add_feature(cfeature.NaturalEarthFeature(
+            category='physical',
+            name='coastline',
+            scale='10m',
+            facecolor='none',
+            edgecolor='black',
+            linewidth=0.5
+        ))
+        ax.add_feature(cfeature.BORDERS, linestyle=':')
+
+        # Add rotated rectangle
+        ax.add_geometries([rectangle], crs=ccrs.PlateCarree(),
+                  facecolor='none', edgecolor='red', linewidth=2)
+
+        # Annotate center
+        ax.plot(center_lon, center_lat, marker='o', color='blue', markersize=6)
+        ax.text(center_lon, center_lat + 0.5, "Center", ha='center', fontsize=10)
+
+        st.markdown(f"Rectangular Area: {length_km} km × {width_km} km\nStrike: {strike_deg}°")
+        st.pyplot(fig1)
+        
         # ── Visualization ────────────────────────────
         st.subheader("📍 Fault Grid Visualization")
-        fig = plt.figure(figsize=(8, 6))
+        fig2 = plt.figure(figsize=(8, 6))
         ax = plt.axes(projection=ccrs.PlateCarree())
         ax.set_extent([center_lon - 8, center_lon + 8, center_lat - 8, center_lat + 8])
         ax.add_feature(cfeature.LAND)
@@ -497,7 +555,7 @@ with tab4:
         ax.plot(center_lon, center_lat, marker='o', color='blue', markersize=6)
         ax.text(center_lon, center_lat + 0.5, "Epic", ha='center', fontsize=9)
         #ax.set_title(f"{n_length}×{n_width} Fault Grid\nMw {magnitude:.1f}, Strike: {strike_deg}°", fontsize=12)
-        st.pyplot(fig)
+        st.pyplot(fig2)
 
         # ── Summary ─────────────────────────────────
         st.markdown(f"**Scaling Model**: `{model}`")
