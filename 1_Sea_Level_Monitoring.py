@@ -302,15 +302,15 @@ with tab2:
 # ── Tab 3 ────────────────────────────────────────────
 with tab3:
     st.header("📈 IOC Tide Gauge Detiding Around Kamchatka Event")
-    st.markdown("Shows detided tide gauge plots from the 15 closest IOC stations using latest 12-hour data window.")
+    st.markdown("Shows detided tide gauge plots from the 15 closest IOC stations using latest 1-days data window.")
 
-    fixed_endtime = "2025-07-30"  # Set your target UTC endtime
+    fixed_endtime = "2025-07-30T12:00"  # Set your target UTC endtime
     for _, row in df_ioc_closest.sort_values("distance_km").head(15).iterrows():
         selected_code = row["code"]
 
         try:
             # --- Fetch Tide Data ---
-            data_url = f"https://www.ioc-sealevelmonitoring.org/bgraph.php?code={selected_code}&output=tab&period=0.5&endtime={fixed_endtime}"
+            data_url = f"https://www.ioc-sealevelmonitoring.org/bgraph.php?code={selected_code}&output=tab&period=1.0&endtime={fixed_endtime}"
             soup_data = BeautifulSoup(requests.get(data_url).content, "html.parser")
             rows = soup_data.find_all("tr")
 
