@@ -228,8 +228,8 @@ with tab2:
     st.markdown("Displays detided data from the 15 closest DART stations surrounding epicenter.")
 
     eq_time = datetime.strptime("2025-07-29 23:24:52", "%Y-%m-%d %H:%M:%S")  # UTC
-    dart_start = "2025-07-29 23:00:00"
-    dart_end = "2025-07-30 23:00:00"
+    dart_start = "2025-07-29"
+    dart_end = "2025-07-30"
     zoom_start = eq_time - pd.Timedelta(hours=4*24)
     zoom_end = eq_time + pd.Timedelta(hours=1*24)
 
