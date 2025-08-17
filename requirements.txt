@@ -21,3 +21,6 @@ plotly
 tqdm
 joblib
 fpdf2
+netCDF4 
+h5netcdf 
+scipy
