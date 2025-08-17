@@ -618,9 +618,9 @@ with tab6:
     import cartopy.feature as cfeature
     from matplotlib.colors import Normalize
 
+    uploaded_file = st.file_uploader("Upload Bathymetry NetCDF", type=["nc"])
     try:
-        nc_path = "resampled_bathymetry_5min.nc"
-        ds = xr.open_dataset(nc_path)
+        ds = xr.open_dataset(uploaded_file)
         depth = ds["resampled_elevation"].sel(lat=slice(lat_min, lat_max), lon=slice(lon_min, lon_max))
         lat = depth["lat"].values
         lon = depth["lon"].values
