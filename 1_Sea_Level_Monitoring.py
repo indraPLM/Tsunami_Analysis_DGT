@@ -684,6 +684,6 @@ with tab6:
                         transform=ccrs.PlateCarree(), fontsize=7, color="gray",
                         bbox=dict(facecolor="white", edgecolor="none", alpha=0.5, boxstyle="round"))
 
-    ax.set_title(f"Maximum Surface Elevation Caused {title}\n with Atmospheric Lamb Wave {c_lamb} m/s)")
+    ax.set_title(f"Maximum Surface Elevation Caused {title}\n with Atmospheric Lamb Wave {c_lamb} m/s")
     plt.tight_layout()
     st.pyplot(fig)
