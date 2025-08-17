@@ -341,19 +341,22 @@ with tab3:
             lat = parse_coord("Latitude")
             lon = parse_coord("Longitude")
 
-            # --- Detiding ---
+            # --- Detiding via Polynomial Fit ---
             time_hours = np.array([(t - timestamps[0]).total_seconds() / 3600 for t in timestamps])
             levels_array = np.array(levels)
-            coef = solve(time_hours, levels_array, lat=lat, method='ols', constit='auto')
-            recon = reconstruct(time_hours, coef)
-            detided = levels_array - recon.h
+
+            degree = 10  # You can tune this value (e.g., 8–12) based on signal smoothness
+            poly_coeffs = np.polyfit(time_hours, levels_array, deg=degree)
+            poly_func = np.poly1d(poly_coeffs)
+            predicted_tide = poly_func(time_hours)
+            detided = levels_array - predicted_tide
 
             # --- Plotting ---
             st.markdown(f"### 🏷️ Station: `{selected_code}` 🌐 Location: ({lat}, {lon})")
             fig, axs = plt.subplots(2, 1, figsize=(10, 6), sharex=True)
 
             axs[0].plot(timestamps, levels_array, label='Observed', color='royalblue')
-            axs[0].plot(timestamps, recon.h, label='Predicted Tide', color='limegreen', linestyle='--')
+            axs[0].plot(timestamps, predicted_tide, label=f'Poly Fit (deg={degree})', color='limegreen', linestyle='--')
             axs[0].set_ylabel("PWL (m)")
             axs[0].legend()
             axs[0].grid(True)
@@ -369,6 +372,7 @@ with tab3:
 
         except Exception as e:
             st.error(f"❌ Error processing IOC station `{selected_code}`: {e}")
+
 
 
 # ── Tab 4 ────────────────────────────────────────────
