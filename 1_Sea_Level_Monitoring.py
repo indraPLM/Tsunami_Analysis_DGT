@@ -222,7 +222,6 @@ import matplotlib.pyplot as plt
 from datetime import datetime, timedelta
 import re
 from bs4 import BeautifulSoup
-from scipy.interpolate import UnivariateSpline
 
 with tab2:
     st.header("🌊 DART Buoy Detiding Around Earthquake")
@@ -265,13 +264,16 @@ with tab2:
 
             df_window = df.copy()
 
-            # Spline detiding
+            # Polynomial detiding
             timestamps = (df_window['datetime'] - df_window['datetime'].min()).dt.total_seconds().values
             heights = df_window['HEIGHT'].values
 
-            # Fit spline (adjust s for smoothness; s=0 fits exactly)
-            spline = UnivariateSpline(timestamps, heights, s=1e2)
-            predicted_tide = spline(timestamps)
+            # Fit high-order polynomial (e.g., degree 10)
+            degree = 10
+            poly_coeffs = np.polyfit(timestamps, heights, deg=degree)
+            poly_func = np.poly1d(poly_coeffs)
+            predicted_tide = poly_func(timestamps)
+
             df_window['predicted_tide'] = predicted_tide
             df_window['detrended'] = df_window['HEIGHT'] - predicted_tide
 
@@ -280,7 +282,7 @@ with tab2:
             fig, axs = plt.subplots(2, 1, figsize=(10, 6), sharex=True)
 
             axs[0].plot(df_window['datetime'], df_window['HEIGHT'], label='Observed', color='blue')
-            axs[0].plot(df_window['datetime'], df_window['predicted_tide'], label='Spline Fit', color='green', linestyle='--')
+            axs[0].plot(df_window['datetime'], df_window['predicted_tide'], label=f'Poly Fit (deg={degree})', color='green', linestyle='--')
             axs[0].set_ylabel("Height (m)")
             axs[0].legend()
             axs[0].grid(True)
