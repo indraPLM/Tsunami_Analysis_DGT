@@ -619,7 +619,7 @@ with tab6:
     from matplotlib.colors import Normalize
 
     try:
-        nc_path = "./resampled_bathymetry_5min.nc"
+        nc_path = "resampled_bathymetry_5min.nc"
         ds = xr.open_dataset(nc_path)
         depth = ds["resampled_elevation"].sel(lat=slice(lat_min, lat_max), lon=slice(lon_min, lon_max))
         lat = depth["lat"].values
