@@ -381,15 +381,19 @@ with tab4:
     st.markdown("Input earthquake magnitude and select scaling law to estimate fault geometry and simulate tsunami wave propagation.")
 
     # ── User Inputs ───────────────────────────────
-    magnitude = st.slider("Moment Magnitude (Mw)", 6.0, 9.5, 8.0, 0.1)
-    model = st.selectbox("Scaling Law Model", ['Well_Coopersmith', 'Papazachos', 'Blesser', 'Stresser'])
-    strike_deg = st.slider("Strike Angle (°)", 0, 360, 45)
-    slip_m = st.slider("Slip Amount (m)", 0.1, 20.0, 2.0)
-    depth_km = st.slider("Depth to Top of Fault (km)", 5, 50, 20)
-    n_length = st.number_input("Segments Along Length", 1, 20, 4)
-    n_width = st.number_input("Segments Along Width", 1, 20, 4)
-    center_lon = st.number_input("Center Longitude", -180.0, 180.0, 110.0)
-    center_lat = st.number_input("Center Latitude", -90.0, 90.0, -12.0)
+    col1, col2 = st.columns(2)
+
+    with col1:
+        magnitude = st.slider("Moment Magnitude (Mw)", 6.0, 9.5, 8.0, 0.1)
+        model = st.selectbox("Scaling Law Model", ['Well_Coopersmith', 'Papazachos', 'Blesser', 'Stresser'])
+        strike_deg = st.slider("Strike Angle (°)", 0, 360, 45)
+        depth_km = st.slider("Depth to Top of Fault (km)", 5, 50, 20)
+
+    with col2:
+        n_length = st.number_input("Segments Along Length", 1, 20, 4)
+        n_width = st.number_input("Segments Along Width", 1, 20, 4)
+        center_lon = st.number_input("Center Longitude", -180.0, 180.0, 110.0)
+        center_lat = st.number_input("Center Latitude", -90.0, 90.0, -12.0)
 
     # ── Scaling Law Function ────────────────────────
     def compute_fault_dimensions(Mw, model):
