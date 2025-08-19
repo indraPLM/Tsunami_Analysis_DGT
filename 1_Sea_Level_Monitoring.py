@@ -507,7 +507,7 @@ with tab4:
             if platform.system() != "Windows":
                 if not shutil.which("wine"):
                     st.error("❌ Wine is not installed. Please install Wine to run COMCOT on non-Windows systems.")
-                    return
+                    st.stop()
                 cmd = ["wine", exe_path]
             else:
                 cmd = [exe_path]
