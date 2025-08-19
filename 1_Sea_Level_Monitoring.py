@@ -483,44 +483,43 @@ with tab4:
 
         st.markdown(f"Rectangular Area: {length_km} km × {width_km} km\nStrike: {strike_deg}°")
         st.pyplot(fig1)
-        
+
+    # ── COMCOT Runner UI ─────────────────────────────
+    st.subheader("🌊 COMCOT Tsunami Model Runner")
+    exe_path = st.text_input("Path to COMCOT executable", value="comcot.exe", key="comcot_path")
+    args_input = st.text_input("Optional arguments (space-separated)", value="", key="comcot_args")
+    run_comcot = st.button("🚀 Run COMCOT", key="comcot_run")
+
+    # ── Execution Logic ──────────────────────────────
+    if run_comcot:
         import subprocess
         import os
 
-        st.title("🌊 COMCOT Tsunami Model Runner")
+        args = args_input.split() if args_input else []
+        cmd = [exe_path] + args
 
-        # --- Input Section ---
-        exe_path = st.text_input("Path to COMCOT executable", value="comcot.exe")
-        args_input = st.text_input("Optional arguments (space-separated)", value="")
+        if not os.path.exists(exe_path):
+            st.error(f"❌ Executable not found: {exe_path}")
+        else:
+            st.success(f"Running: {' '.join(cmd)}")
+            st.text("Streaming output...\n")
 
-        run_button = st.button("🚀 Run COMCOT")
+            try:
+                process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
 
-        # --- Execution Section ---
-        if run_button:
-            args = args_input.split() if args_input else []
-            cmd = [exe_path] + args
+                output_area = st.empty()
+                output_lines = []
 
-            if not os.path.exists(exe_path):
-                st.error(f"❌ Executable not found: {exe_path}")
-            else:
-                st.success(f"Running: {' '.join(cmd)}")
-                st.text("Streaming output...\n")
+                for line in process.stdout:
+                    output_lines.append(line.strip())
+                    output_area.text("\n".join(output_lines))
 
-                try:
-                    process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+                process.wait()
+                st.success(f"✅ Process finished with exit code {process.returncode}")
 
-                    output_area = st.empty()
-                    output_lines = []
-
-                    for line in process.stdout:
-                        output_lines.append(line.strip())
-                        output_area.text("\n".join(output_lines))
-
-                    process.wait()
-                    st.success(f"✅ Process finished with exit code {process.returncode}")
-
-                except Exception as e:
-                    st.error(f"⚠️ Error running process: {e}")
+            except Exception as e:
+                st.error(f"⚠️ Error running process: {e}")
+        
 
 
 # ── Tab 5 ────────────────────────────────────────────
