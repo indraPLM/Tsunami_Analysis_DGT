@@ -492,24 +492,31 @@ with tab4:
 
     # ── Execution Logic ──────────────────────────────
     if run_comcot:
-        import subprocess
+       import subprocess
         import os
+        import platform
+        import shutil
 
-        #args = args_input.split() if args_input else []
-        #cmd = [exe_path] + args
-        
         exe_path = os.path.abspath("./comcot.exe")
-        cmd = exe_path #+ args  # If using Wine on Linux
- 
+
         if not os.path.exists(exe_path):
             st.error(f"❌ Executable not found: {exe_path}")
+        elif not os.access(exe_path, os.X_OK) and platform.system() == "Linux":
+            st.error("❌ COMCOT executable is not marked as executable. Try: chmod +x comcot.exe")
         else:
+            if platform.system() != "Windows":
+                if not shutil.which("wine"):
+                    st.error("❌ Wine is not installed. Please install Wine to run COMCOT on non-Windows systems.")
+                    return
+                cmd = ["wine", exe_path]
+            else:
+                cmd = [exe_path]
+
             st.success(f"Running: {' '.join(cmd)}")
             st.text("Streaming output...\n")
 
             try:
                 process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
-
                 output_area = st.empty()
                 output_lines = []
 
@@ -521,8 +528,7 @@ with tab4:
                 st.success(f"✅ Process finished with exit code {process.returncode}")
 
             except Exception as e:
-                st.error(f"⚠️ Error running process: {e}")
-        
+                st.error(f"⚠️ Error running process: {e}")     
 
 
 # ── Tab 5 ────────────────────────────────────────────
