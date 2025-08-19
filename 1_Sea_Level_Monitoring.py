@@ -486,7 +486,7 @@ with tab4:
 
     # ── COMCOT Runner UI ─────────────────────────────
     st.subheader("🌊 COMCOT Tsunami Model Runner")
-    exe_path = st.text_input("Path to COMCOT executable", value="comcot.exe", key="comcot_path")
+    exe_path = st.text_input("Path to COMCOT executable", value="./comcot.exe", key="comcot_path")
     args_input = st.text_input("Optional arguments (space-separated)", value="", key="comcot_args")
     run_comcot = st.button("🚀 Run COMCOT", key="comcot_run")
 
