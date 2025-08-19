@@ -492,7 +492,7 @@ with tab4:
 
     # ── Execution Logic ──────────────────────────────
     if run_comcot:
-       import subprocess
+        import subprocess
         import os
         import platform
         import shutil
