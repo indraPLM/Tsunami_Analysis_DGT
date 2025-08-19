@@ -495,11 +495,11 @@ with tab4:
         import subprocess
         import os
 
-        args = args_input.split() if args_input else []
+        #args = args_input.split() if args_input else []
         #cmd = [exe_path] + args
         
         exe_path = os.path.abspath("./comcot.exe")
-        cmd = ["wine", exe_path] + args  # If using Wine on Linux
+        cmd = ["wine", exe_path] #+ args  # If using Wine on Linux
  
         if not os.path.exists(exe_path):
             st.error(f"❌ Executable not found: {exe_path}")
