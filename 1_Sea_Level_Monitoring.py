@@ -385,7 +385,7 @@ with tab4:
         strike_deg = st.number_input("Strike Angle (°)", 0, 360, 45)
         depth_km = st.number_input("Depth to Top of Fault (km)", 5, 60, 20)
 
-    with col4:
+    with col3:
         center_lon = st.number_input("Center Longitude", -180.0, 180.0, 110.0)
         center_lat = st.number_input("Center Latitude", -90.0, 90.0, -12.0)
 
