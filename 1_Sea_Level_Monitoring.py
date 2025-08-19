@@ -486,8 +486,8 @@ with tab4:
 
     # ── COMCOT Runner UI ─────────────────────────────
     st.subheader("🌊 COMCOT Tsunami Model Runner")
-    exe_path = st.text_input("Path to COMCOT executable", value="./comcot.exe", key="comcot_path")
-    args_input = st.text_input("Optional arguments (space-separated)", value="", key="comcot_args")
+    #exe_path = st.text_input("Path to COMCOT executable", value="./comcot.exe", key="comcot_path")
+    #args_input = st.text_input("Optional arguments (space-separated)", value="", key="comcot_args")
     run_comcot = st.button("🚀 Run COMCOT", key="comcot_run")
 
     # ── Execution Logic ──────────────────────────────
@@ -496,8 +496,11 @@ with tab4:
         import os
 
         args = args_input.split() if args_input else []
-        cmd = [exe_path] + args
-
+        #cmd = [exe_path] + args
+        
+        exe_path = os.path.abspath("./comcot.exe")
+        cmd = ["wine", exe_path] + args  # If using Wine on Linux
+ 
         if not os.path.exists(exe_path):
             st.error(f"❌ Executable not found: {exe_path}")
         else:
