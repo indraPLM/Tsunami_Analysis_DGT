@@ -376,7 +376,7 @@ with tab4:
     st.markdown("Input earthquake magnitude and select scaling law to estimate fault geometry and simulate tsunami wave propagation.")
 
     # ── User Inputs ───────────────────────────────
-    col1, col2, col3, col4 = st.columns(4)
+    col1, col2, col3 = st.columns(3)
 
     with col1:
         magnitude = st.number_input("Moment Magnitude (Mw)", 6.0, 9.5, 8.0)
@@ -385,9 +385,6 @@ with tab4:
         strike_deg = st.number_input("Strike Angle (°)", 0, 360, 45)
         depth_km = st.number_input("Depth to Top of Fault (km)", 5, 60, 20)
 
-    with col3:
-        n_length = st.number_input("Segments Along Length", 1, 20, 4)
-        n_width = st.number_input("Segments Along Width", 1, 20, 4)
     with col4:
         center_lon = st.number_input("Center Longitude", -180.0, 180.0, 110.0)
         center_lat = st.number_input("Center Latitude", -90.0, 90.0, -12.0)
@@ -457,8 +454,131 @@ with tab4:
             rotated_coords.append((center_lon + dlon, center_lat + dlat))
 
         rectangle = Polygon(rotated_coords)
-        
+                      
+        # ── Visualization ────────────────────────────
+        st.subheader("📍 Fault Visualization")
+        fig1 = plt.figure(figsize=(8, 6))
+        ax = plt.axes(projection=ccrs.PlateCarree())
+        ax.set_extent([center_lon - 8, center_lon + 8, center_lat - 8, center_lat + 8])
+        ax.add_feature(cfeature.LAND)
+        ax.add_feature(cfeature.OCEAN)
+        #ax.add_feature(cfeature.COASTLINE, linewidth=1)
+        ax.add_feature(cfeature.NaturalEarthFeature(
+            category='physical',
+            name='coastline',
+            scale='10m',
+            facecolor='none',
+            edgecolor='black',
+            linewidth=0.5
+        ))
+        ax.add_feature(cfeature.BORDERS, linestyle=':')
 
+        # Add rotated rectangle
+        ax.add_geometries([rectangle], crs=ccrs.PlateCarree(),
+                  facecolor='none', edgecolor='red', linewidth=2)
+
+        # Annotate center
+        ax.plot(center_lon, center_lat, marker='o', color='blue', markersize=6)
+        ax.text(center_lon, center_lat + 0.5, "Center", ha='center', fontsize=10)
+
+        st.markdown(f"Rectangular Area: {length_km} km × {width_km} km\nStrike: {strike_deg}°")
+        st.pyplot(fig1)
+        
+        import subprocess
+        import os
+
+        st.title("🌊 COMCOT Tsunami Model Runner")
+
+        # --- Input Section ---
+        exe_path = st.text_input("Path to COMCOT executable", value="comcot.exe")
+        args_input = st.text_input("Optional arguments (space-separated)", value="")
+
+        run_button = st.button("🚀 Run COMCOT")
+
+        # --- Execution Section ---
+        if run_button:
+            args = args_input.split() if args_input else []
+            cmd = [exe_path] + args
+
+            if not os.path.exists(exe_path):
+                st.error(f"❌ Executable not found: {exe_path}")
+            else:
+                st.success(f"Running: {' '.join(cmd)}")
+                st.text("Streaming output...\n")
+
+                try:
+                    process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+
+                    output_area = st.empty()
+                    output_lines = []
+
+                    for line in process.stdout:
+                        output_lines.append(line.strip())
+                        output_area.text("\n".join(output_lines))
+
+                    process.wait()
+                    st.success(f"✅ Process finished with exit code {process.returncode}")
+
+                except Exception as e:
+                    st.error(f"⚠️ Error running process: {e}")
+
+
+# ── Tab 5 ────────────────────────────────────────────
+with tab5:
+    st.header("🔁 Tsunami Source Inversion")
+    uploaded_file = st.file_uploader("Upload Tide Gauge Observations (CSV)", type=["csv"])
+
+    col1, col2, col3, col4 = st.columns(4)
+
+    with col1:
+        magnitude = st.number_input("Moment Magnitude (Mw)", 6.0, 9.5, 8.0)
+        model = st.selectbox("Scaling Law Model", ['Well_Coopersmith', 'Papazachos', 'Blesser', 'Stresser'])
+    with col2:
+        strike_deg = st.number_input("Strike Angle (°)", 0, 360, 45)
+        depth_km = st.number_input("Depth to Top of Fault (km)", 5, 60, 20)
+    with col3:
+        n_length = st.number_input("Segments Along Length", 1, 20, 4)
+        n_width = st.number_input("Segments Along Width", 1, 20, 4)
+    with col4:
+        center_lon = st.number_input("Center Longitude", -180.0, 180.0, 110.0)
+        center_lat = st.number_input("Center Latitude", -90.0, 90.0, -12.0)
+
+    # ── Scaling Law Function ────────────────────────
+    def compute_fault_dimensions(Mw, model):
+        if model == 'Well_Coopersmith':
+            logL = (Mw - 4.38) / 1.49
+            logW = (Mw - 4.06) / 2.25
+            logDmax = -1.38 + 1.02 * logL
+            logDave = -1.43 + 0.88 * logL
+        elif model == 'Papazachos':
+            logL = -2.19 + 0.55 * Mw
+            logW = -0.63 + 0.31 * Mw
+            logDmax = logDave = -2.78 + 0.64 * Mw
+        elif model == 'Blesser':
+            logL = -2.19 + 0.55 * Mw
+            logW = -1.36 + 0.38 * Mw
+            logDmax = logDave = None
+        elif model == 'Stresser':
+            logL = -3.03 + 0.63 * Mw
+            logW = -1.01 + 0.35 * Mw
+            logDmax = -4.73 + 0.71 * Mw
+            logDave = -4.81 + 0.66 * Mw
+        else:
+            raise ValueError("Unknown model")
+
+        length_km = 10 ** logL
+        width_km  = 10 ** logW
+        Dmax_cm   = 10 ** logDmax if logDmax is not None else None
+        Dave_cm   = 10 ** logDave if logDave is not None else None
+
+        return length_km, width_km, Dmax_cm, Dave_cm
+
+    run = st.button("Run Simulation")
+
+    if run:
+        # ── Compute Fault Dimensions ─────────────────────
+        length_km, width_km, Dmax_cm, Dave_cm = compute_fault_dimensions(magnitude, model)
+           
         # ── Convert km to degrees ─────────────────────
         km_per_deg_lat = 111.0
         km_per_deg_lon = 111.0 * np.cos(np.radians(center_lat))
@@ -503,37 +623,7 @@ with tab4:
                     rotated.append((center_lon + dlon, center_lat + dlat))
                 segment_polygons.append(Polygon(rotated))
 
-        
-        # ── Visualization ────────────────────────────
-        st.subheader("📍 Fault Visualization")
-        fig1 = plt.figure(figsize=(8, 6))
-        ax = plt.axes(projection=ccrs.PlateCarree())
-        ax.set_extent([center_lon - 8, center_lon + 8, center_lat - 8, center_lat + 8])
-        ax.add_feature(cfeature.LAND)
-        ax.add_feature(cfeature.OCEAN)
-        #ax.add_feature(cfeature.COASTLINE, linewidth=1)
-        ax.add_feature(cfeature.NaturalEarthFeature(
-            category='physical',
-            name='coastline',
-            scale='10m',
-            facecolor='none',
-            edgecolor='black',
-            linewidth=0.5
-        ))
-        ax.add_feature(cfeature.BORDERS, linestyle=':')
-
-        # Add rotated rectangle
-        ax.add_geometries([rectangle], crs=ccrs.PlateCarree(),
-                  facecolor='none', edgecolor='red', linewidth=2)
-
-        # Annotate center
-        ax.plot(center_lon, center_lat, marker='o', color='blue', markersize=6)
-        ax.text(center_lon, center_lat + 0.5, "Center", ha='center', fontsize=10)
-
-        st.markdown(f"Rectangular Area: {length_km} km × {width_km} km\nStrike: {strike_deg}°")
-        st.pyplot(fig1)
-        
-        # ── Visualization ────────────────────────────
+    # ── Visualization ────────────────────────────
         st.subheader("📍 Fault Grid Visualization")
         fig2 = plt.figure(figsize=(8, 6))
         ax = plt.axes(projection=ccrs.PlateCarree())
@@ -576,12 +666,6 @@ with tab4:
 
     else:
         st.info("🖼️ Simulation results would be visualized here after you run the model.")
-
-
-# ── Tab 5 ────────────────────────────────────────────
-with tab5:
-    st.header("🔁 Tsunami Source Inversion")
-    uploaded_file = st.file_uploader("Upload Tide Gauge Observations (CSV)", type=["csv"])
 
 
 # ── Tab 6: Lamb Wave Simulation ─────────────────────
