@@ -82,6 +82,7 @@ with tab1:
         return pd.DataFrame(buoy_data)
 
     df_dart = fetch_dart_metadata_v2(station_ids)
+    df_dart.to_csv('dart_metadata.csv', index=False, encoding='utf-8')
 
     @st.cache_data
     def fetch_ioc_data():
@@ -118,6 +119,7 @@ with tab1:
 
     df_ioc = fetch_ioc_data()
     status_colors = {"online": "green", "offline": "red"}
+    df_ioc.to_csv('ioc_metadata.csv', index=False, encoding='utf-8')
 
     import math
 
