@@ -83,6 +83,7 @@ with tab1:
 
     df_dart = fetch_dart_metadata_v2(station_ids)
     df_dart.to_csv('dart_metadata.csv', index=False, encoding='utf-8')
+    st.dataframe(df_dart)
 
     @st.cache_data
     def fetch_ioc_data():
@@ -120,6 +121,7 @@ with tab1:
     df_ioc = fetch_ioc_data()
     status_colors = {"online": "green", "offline": "red"}
     df_ioc.to_csv('ioc_metadata.csv', index=False, encoding='utf-8')
+    st.dataframe(df_ioc)
 
     import math
 
@@ -218,6 +220,9 @@ with tab1:
     df_ioc_revised = df_ioc_revised[["station", "lat", "lon", "location_country", "distance_km", "arrival_time"]]
     df_ioc_revised.index = range(1, len(df_ioc_revised)+1)
     st.dataframe(df_ioc_revised)
+
+    #st.dataframe(df_dart)
+    #st.dataframe(df_ioc)
 
 # ── Tab 2: Tsunami Analysis ─────────────────────────────
 with tab2:
