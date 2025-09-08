@@ -143,7 +143,7 @@ with tab1:
 
     # ➡️ Find closest DART buoys
     df_dart["distance_km"] = df_dart.apply(lambda row: haversine(eq_lat, eq_lon, row["lat"], row["lon"]), axis=1)
-    df_dart_closest = df_dart.nsmallest(15, "distance_km")
+    df_dart_closest = df_dart.nsmallest(20, "distance_km")
 
     # ➡️ Find closest IOC stations
     df_ioc["distance_km"] = df_ioc.apply(lambda row: haversine(eq_lat, eq_lon, row["lat"], row["lon"]), axis=1)
