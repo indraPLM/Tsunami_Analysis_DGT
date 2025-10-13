@@ -47,7 +47,7 @@ with tab1:
     #]
 
     @st.cache_data(show_spinner="📡 Fetching DART Buoy Metadata...")
-    def fetch_dart_metadata_v2(station_ids, startdate="2025-07-29", enddate="2025-07-31"):
+    def fetch_dart_metadata_v2(station_ids, startdate="2025-10-10", enddate="2025-10-11"):
         base_url = "https://www.ndbc.noaa.gov/station_page.php"
         buoy_data = []
         for station in station_ids:
@@ -137,9 +137,9 @@ with tab1:
         return R * c
 
     # 🌋 Kamchatka Earthquake Epicenter 52.512°N 160.324°E
-    eq_lat = 52.512
-    eq_lon = 160.324
-    signed = "📌 Kamchatka Earthquake Epicenter"
+    eq_lat = 7.34
+    eq_lon = 126.87
+    signed = "📌 Phillipine Earthquake Epicenter"
 
     # ➡️ Find closest DART buoys
     df_dart["distance_km"] = df_dart.apply(lambda row: haversine(eq_lat, eq_lon, row["lat"], row["lon"]), axis=1)
