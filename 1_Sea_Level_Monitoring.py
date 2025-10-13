@@ -229,9 +229,9 @@ with tab2:
     st.header("🌊 DART Buoy Detiding Around Earthquake")
     st.markdown("Displays detided data from the 15 closest DART stations surrounding epicenter.")
 
-    eq_time = datetime.strptime("2025-07-29 23:24:52", "%Y-%m-%d %H:%M:%S")  # UTC
-    dart_start = "2025-07-29"
-    dart_end = "2025-07-30"
+    eq_time = datetime.strptime("2025-10-10 01:43:58", "%Y-%m-%d %H:%M:%S")  # UTC
+    dart_start = "2025-10-10"
+    dart_end = "2025-10-11"
     zoom_start = eq_time - pd.Timedelta(hours=4*24)
     zoom_end = eq_time + pd.Timedelta(hours=1*24)
 
@@ -306,7 +306,7 @@ with tab3:
     st.header("📈 IOC Tide Gauge Detiding Around Kamchatka Event")
     st.markdown("Shows detided tide gauge plots from the 15 closest IOC stations using latest 1-days data window.")
 
-    fixed_endtime = "2025-07-30T12:00"  # Set your target UTC endtime
+    fixed_endtime = "2025-10-10T12:00"  # Set your target UTC endtime
     for _, row in df_ioc_closest.sort_values("distance_km").head(15).iterrows():
         selected_code = row["code"]
 
